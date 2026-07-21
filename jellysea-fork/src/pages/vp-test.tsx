@@ -11,7 +11,6 @@ const TestPanel: NextPage = () => {
       : 'wss://test.tecknet.dev/vp'
 
   const [roomId, setRoomId] = useState<string | null>(null)
-  const [myPeerId, setMyPeerId] = useState<string | null>(null)
   const [connectionState, setConnectionState] = useState<string>('disconnected')
   const [peers, setPeers] = useState<{ id: string; displayName: string; state: string }[]>([])
   const [messages, setMessages] = useState<{ id: string; senderName: string; text: string; timestamp: number }[]>([])
@@ -21,87 +20,28 @@ const TestPanel: NextPage = () => {
   const [chatInput, setChatInput] = useState('')
 
   const wsRef = useRef<WebSocket | null>(null)
+  const myPeerIdRef = useRef<string | null>(null)
+  const roomIdRef = useRef<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const displayNameRef = useRef('Anonymous')
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  const createRoom = useCallback(async () => {
-    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return
-
-    const handler = (event: MessageEvent) => {
-      const msg = JSON.parse(event.data)
-      if (msg.type === 'room-created') {
-        wsRef.current?.removeEventListener('message', handler)
-        setRoomId(msg.payload.roomId)
-      }
-    }
-    wsRef.current.addEventListener('message', handler)
-    wsRef.current.send(JSON.stringify({
-      type: 'create-room',
-      roomId: '',
-      payload: {},
-      senderId: '',
-    }))
-  }, [])
-
-  const joinRoom = useCallback(async () => {
-    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return
-    if (!joinRoomId.trim()) return
-
-    setJoinError(null)
-    const handler = (event: MessageEvent) => {
-      const msg = JSON.parse(event.data)
-      if (msg.type === 'room-joined') {
-        wsRef.current?.removeEventListener('message', handler)
-        setRoomId(msg.payload.roomId)
-      }
-      if (msg.type === 'error') {
-        wsRef.current?.removeEventListener('message', handler)
-        setJoinError(msg.payload.message)
-      }
-    }
-    wsRef.current.addEventListener('message', handler)
-    wsRef.current.send(JSON.stringify({
-      type: 'join-room',
-      roomId: joinRoomId.trim(),
-      payload: { roomId: joinRoomId.trim() },
-      senderId: '',
-    }))
-    setJoinRoomId('')
-  }, [joinRoomId])
-
   const leaveRoom = useCallback(() => {
-    if (wsRef.current?.readyState === WebSocket.OPEN && roomId) {
-      wsRef.current.send(JSON.stringify({ type: 'leave-room', roomId, payload: {}, senderId: '' }))
+    if (wsRef.current?.readyState === WebSocket.OPEN && roomIdRef.current) {
+      wsRef.current.send(JSON.stringify({ type: 'leave-room', roomId: roomIdRef.current, payload: {}, senderId: '' }))
     }
     setRoomId(null)
+    roomIdRef.current = null
     setPeers([])
     setMessages([])
-  }, [roomId])
+  }, [])
 
-  const sendChat = useCallback((e: React.FormEvent) => {
-    e.preventDefault()
-    if (!chatInput.trim() || !wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return
-
-    const msg = {
-      id: crypto.randomUUID(),
-      senderId: myPeerId || '',
-      senderName: user?.displayName || user?.username || 'Anonymous',
-      text: chatInput.trim(),
-      timestamp: Date.now(),
-    }
-    setMessages((prev) => [...prev, msg])
-
-    wsRef.current.send(JSON.stringify({
-      type: 'chat',
-      roomId: roomId || '',
-      payload: { text: chatInput.trim(), senderName: user?.displayName || user?.username || 'Anonymous' },
-      senderId: myPeerId || '',
-    }))
-    setChatInput('')
-  }, [chatInput, myPeerId, roomId, user])
+  useEffect(() => {
+    displayNameRef.current = user?.displayName || user?.username || 'Anonymous'
+  }, [user])
 
   useEffect(() => {
     const ws = new WebSocket(signalingUrl)
@@ -114,7 +54,7 @@ const TestPanel: NextPage = () => {
       ws.send(JSON.stringify({
         type: 'set-user-info',
         roomId: '',
-        payload: { displayName: user?.displayName || user?.username || 'Anonymous', avatar: user?.avatar },
+        payload: { displayName: displayNameRef.current, avatar: user?.avatar },
         senderId: '',
       }))
     }
@@ -123,13 +63,20 @@ const TestPanel: NextPage = () => {
       const msg = JSON.parse(event.data)
 
       if (msg.type === 'peer-id') {
-        setMyPeerId(msg.payload.peerId)
+        myPeerIdRef.current = msg.payload.peerId
+      }
+
+      if (msg.type === 'room-created' || msg.type === 'room-joined') {
+        const rid = msg.payload.roomId as string
+        roomIdRef.current = rid
+        setRoomId(rid)
       }
 
       if (msg.type === 'room-state') {
+        const pid = myPeerIdRef.current
         setPeers(
           msg.payload.peers
-            .filter((p: { id: string }) => p.id !== myPeerId)
+            .filter((p: { id: string }) => p.id !== pid)
             .map((p: { id: string; displayName: string }) => ({
               id: p.id,
               displayName: p.displayName,
@@ -171,7 +118,55 @@ const TestPanel: NextPage = () => {
     return () => {
       ws.close()
     }
-  }, [signalingUrl, user, myPeerId])
+  }, [signalingUrl])
+
+  const createRoom = useCallback(() => {
+    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return
+    wsRef.current.send(JSON.stringify({
+      type: 'create-room',
+      roomId: '',
+      payload: {},
+      senderId: '',
+    }))
+  }, [])
+
+  const joinRoom = useCallback(() => {
+    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return
+    if (!joinRoomId.trim()) return
+    setJoinError(null)
+    wsRef.current.send(JSON.stringify({
+      type: 'join-room',
+      roomId: joinRoomId.trim(),
+      payload: { roomId: joinRoomId.trim() },
+      senderId: '',
+    }))
+    setJoinRoomId('')
+  }, [joinRoomId])
+
+  const sendChat = useCallback((e: React.FormEvent) => {
+    e.preventDefault()
+    if (!chatInput.trim() || !wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return
+
+    const name = displayNameRef.current
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: crypto.randomUUID(),
+        senderId: myPeerIdRef.current || '',
+        senderName: name,
+        text: chatInput.trim(),
+        timestamp: Date.now(),
+      },
+    ])
+
+    wsRef.current.send(JSON.stringify({
+      type: 'chat',
+      roomId: roomIdRef.current || '',
+      payload: { text: chatInput.trim(), senderName: name },
+      senderId: myPeerIdRef.current || '',
+    }))
+    setChatInput('')
+  }, [chatInput])
 
   const connectionColor =
     connectionState === 'connected'
@@ -196,9 +191,6 @@ const TestPanel: NextPage = () => {
             {connectionState}
           </span>
         </div>
-        {myPeerId && (
-          <span className="text-xs text-slate-500">ID: {myPeerId.slice(0, 8)}...</span>
-        )}
         {roomId && (
           <span className="rounded-full bg-indigo-600/20 px-2.5 py-1 text-xs font-medium text-indigo-400">
             Room: {roomId}
