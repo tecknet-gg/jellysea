@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import VideoPlayer from '@app/components/VideoPlayer'
 import DriftOverlay from '@app/components/WatchParty/DriftOverlay'
@@ -37,6 +37,7 @@ export default function PartyPlayer({
   const pingRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const driftRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const wasPlayingRef = useRef(true)
+  const videoRef = useRef<HTMLVideoElement | null>(null)
 
   useEffect(() => {
     return () => {
@@ -53,7 +54,7 @@ export default function PartyPlayer({
       if (diff <= 0) {
         setCountdown(0)
         if (preloadedStream) {
-          setResolved({ type: preloadedStream.type, url: preloadedStream.url, seasonNumber: preloadedStream.seasonNumber, episodeNumber: preloadedStream.episodeNumber })
+          setResolved({ type: preloadedStream.type as 'direct' | 'hls', url: preloadedStream.url, seasonNumber: preloadedStream.seasonNumber, episodeNumber: preloadedStream.episodeNumber })
           setResolving(false)
         } else { resolveStream() }
       } else { setCountdown(diff); timeout = setTimeout(update, 200) }
@@ -79,7 +80,7 @@ export default function PartyPlayer({
   useEffect(() => {
     if (!resolved?.url || !isHost || !wsRef.current || !partyId) return
     pingRef.current = setInterval(() => {
-      const v = document.querySelector('video')
+      const v = videoRef.current
       if (!v || !wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return
       wsRef.current.send(JSON.stringify({
         type: 'sync-ping', roomId: partyId,
@@ -92,7 +93,7 @@ export default function PartyPlayer({
 
   useEffect(() => {
     if (!hostState || isDetached || isHost) return
-    const v = document.querySelector('video')
+    const v = videoRef.current
     if (!v) return
     if (hostState.isPlaying && v.paused) v.play().catch(() => {})
     if (!hostState.isPlaying && !v.paused && wasPlayingRef.current) {
@@ -108,7 +109,7 @@ export default function PartyPlayer({
       const next = pauseCountdown - 1
       if (next <= 0) {
         setPauseCountdown(-1)
-        const v = document.querySelector('video')
+        const v = videoRef.current
         if (v && !v.paused) v.pause()
       } else setPauseCountdown(next)
     }, 1000)
@@ -116,35 +117,33 @@ export default function PartyPlayer({
   }, [pauseCountdown])
 
   useEffect(() => {
-    if (!hostState || isDetached || isHost) { setDrift(null); return }
+    setDrift(null)
+    if (driftRef.current) clearInterval(driftRef.current)
+    if (isDetached || isHost || !hostState || !hostState.isPlaying) return
+
     driftRef.current = setInterval(() => {
-      const v = document.querySelector('video')
+      const v = videoRef.current
       if (!v || !hostState) return
       const latency = (Date.now() - hostState.timestamp) / 1000
       const hostAdjusted = hostState.currentTime + (hostState.isPlaying ? latency : 0)
-      const d = Math.round((v.currentTime - hostAdjusted) * 10) / 10
-      setDrift(d)
-      if (Math.abs(d) > 10 && hostState.isPlaying) {
-        v.currentTime = hostState.currentTime + 0.5
-        setDrift(0)
-      }
+      setDrift(Math.round((v.currentTime - hostAdjusted) * 10) / 10)
     }, 500)
     return () => { if (driftRef.current) clearInterval(driftRef.current) }
   }, [hostState, isDetached, isHost])
 
-  const handleResync = () => {
-    const v = document.querySelector('video')
+  const handleResync = useCallback(() => {
+    const v = videoRef.current
     if (!v || !hostState) return
     v.currentTime = hostState.currentTime + 0.5
     setDrift(0)
-  }
+  }, [hostState])
 
-  const handleClose = () => {
-    if (!isHost && wsRef.current?.readyState === WebSocket.OPEN && partyId) {
+  const handleClose = useCallback(() => {
+    if (wsRef.current?.readyState === WebSocket.OPEN && partyId) {
       wsRef.current.send(JSON.stringify({ type: 'close-player', roomId: partyId, payload: {}, senderId: '' }))
     }
     onClose()
-  }
+  }, [wsRef, partyId, onClose])
 
   const retryResolve = () => { setError(null); resolveStream() }
 
@@ -188,7 +187,7 @@ export default function PartyPlayer({
       {countdown === 0 && resolved?.url && createPortal(
         <>
           <VideoPlayer
-            type={(resolved.type as 'direct' | 'hls') || 'hls'}
+            type={resolved.type as 'direct' | 'hls'}
             streamUrl={resolved.url}
             title={title}
             posterUrl={posterPath ? `https://image.tmdb.org/t/p/w500${posterPath}` : undefined}

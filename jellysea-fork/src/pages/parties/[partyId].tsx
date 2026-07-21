@@ -45,6 +45,7 @@ const PartyRoomPage: NextPage = () => {
   const [myPeerId, setMyPeerId] = useState<string | null>(null)
   const [otherMembers, setOtherMembers] = useState<{ id: string; displayName: string; avatar?: string }[]>([])
   const [playerActive, setPlayerActive] = useState(false)
+  const [playbackActive, setPlaybackActive] = useState(false)
   const [playerStartAt, setPlayerStartAt] = useState<number | null>(null)
   const [hostSyncState, setHostSyncState] = useState<{ currentTime: number; isPlaying: boolean; timestamp: number } | null>(null)
   const [isDetached, setIsDetached] = useState(false)
@@ -61,6 +62,8 @@ const PartyRoomPage: NextPage = () => {
   const playerActiveRef = useRef(false)
   const isDetachedRef = useRef(false)
   const prevMemberCountRef = useRef(0)
+  const prevPeerIdsRef = useRef<string[]>([])
+  const playbackActiveRef = useRef(false)
   const [preloadedStream, setPreloadedStream] = useState<{ type: 'direct' | 'hls'; url: string; seasonNumber?: number; episodeNumber?: number } | null>(null)
 
   const signalingUrl =
@@ -183,15 +186,20 @@ const PartyRoomPage: NextPage = () => {
 
       if (msg.type === 'room-state') {
         setLiveMembers(msg.payload.peers?.length ?? 0)
-        const count = msg.payload.peers?.length ?? 0
-        if (count > prevMemberCountRef.current) {
-          setMessages((prev) => [...prev, {
-            id: crypto.randomUUID(), senderId: '', senderName: 'System',
-            text: `${count} member${count !== 1 ? 's' : ''} in party`,
-            timestamp: Date.now(), system: true,
-          }])
+        const peers = (msg.payload.peers ?? []) as { id: string; displayName: string }[]
+        const newIds = peers.map((p) => p.id)
+        const prevIds = prevPeerIdsRef.current
+        const joined = peers.filter((p) => !prevIds.includes(p.id))
+        if (joined.length > 0) {
+          for (const p of joined) {
+            setMessages((prev) => [...prev, {
+              id: crypto.randomUUID(), senderId: '', senderName: 'System',
+              text: `${p.displayName} joined the party`,
+              timestamp: Date.now(), system: true,
+            }])
+          }
         }
-        prevMemberCountRef.current = count
+        prevPeerIdsRef.current = newIds
         if (msg.payload.peers) {
           setOtherMembers(
             msg.payload.peers.filter((p: { userId?: string }) =>
@@ -233,6 +241,8 @@ const PartyRoomPage: NextPage = () => {
       }
 
       if (msg.type === 'media-start') {
+        playbackActiveRef.current = true
+        setPlaybackActive(true)
         if (playerActiveRef.current) return
         const p = msg.payload as { startAt: number; tmdbId: number; mediaType: 'movie' | 'tv'; title: string; posterPath?: string; seasonNumber?: number; episodeNumber?: number }
         setPlayerStartAt(p.startAt)
@@ -247,6 +257,8 @@ const PartyRoomPage: NextPage = () => {
       }
 
       if (msg.type === 'close-player') {
+        playbackActiveRef.current = false
+        setPlaybackActive(false)
         handleClosePlayer()
       }
     }
@@ -365,10 +377,19 @@ const PartyRoomPage: NextPage = () => {
   const handleClosePlayer = useCallback(() => {
     setPlayerActive(false)
     playerActiveRef.current = false
+    setPlaybackActive(false)
+    playbackActiveRef.current = false
     setPlayerStartAt(null)
     setHostSyncState(null)
-    setIsDetached(false); isDetachedRef.current = false
+    setIsDetached(false)
+    isDetachedRef.current = false
   }, [])
+
+  const handleJoinPlayback = useCallback(() => {
+    if (!party?.media) return
+    setPlayerStartAt(Date.now() + 3000)
+    setPlayerActive(true)
+  }, [party?.media])
 
   const mediaDetailsEndpoint = party?.media
     ? `/${party.media.mediaType === 'movie' ? 'movie' : 'tv'}/${party.media.tmdbId}`
@@ -563,6 +584,17 @@ const PartyRoomPage: NextPage = () => {
                       >
                         <PlayIcon className="h-3.5 w-3.5" />
                         Start Watching
+                      </button>
+                    </div>
+                  )}
+                  {!isHost && playbackActive && !playerActive && (
+                    <div className="mt-3">
+                      <button
+                        onClick={handleJoinPlayback}
+                        className="flex items-center gap-1 rounded-lg bg-indigo-600/80 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-500"
+                      >
+                        <PlayIcon className="h-3.5 w-3.5" />
+                        Join Playback
                       </button>
                     </div>
                   )}
