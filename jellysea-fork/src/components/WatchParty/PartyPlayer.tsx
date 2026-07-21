@@ -37,7 +37,6 @@ export default function PartyPlayer({
   const pingRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const driftRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const wasPlayingRef = useRef(true)
-  const videoRef = useRef<HTMLVideoElement | null>(null)
 
   useEffect(() => {
     return () => {
@@ -90,7 +89,7 @@ export default function PartyPlayer({
   useEffect(() => {
     if (!resolved?.url || !isHost || !wsRef.current || !partyId) return
     pingRef.current = setInterval(() => {
-      const v = videoRef.current
+      const v = document.querySelector('video')
       if (!v || !wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return
       wsRef.current.send(JSON.stringify({
         type: 'sync-ping', roomId: partyId,
@@ -103,7 +102,7 @@ export default function PartyPlayer({
 
   useEffect(() => {
     if (!hostState || isDetached || isHost) return
-    const v = videoRef.current
+    const v = document.querySelector('video')
     if (!v) return
     if (hostState.isPlaying && v.paused) v.play().catch(() => {})
     if (!hostState.isPlaying && !v.paused && wasPlayingRef.current) {
@@ -119,7 +118,7 @@ export default function PartyPlayer({
       const next = pauseCountdown - 1
       if (next <= 0) {
         setPauseCountdown(-1)
-        const v = videoRef.current
+        const v = document.querySelector('video')
         if (v && !v.paused) v.pause()
       } else setPauseCountdown(next)
     }, 1000)
@@ -132,7 +131,7 @@ export default function PartyPlayer({
     if (isDetached || isHost || !hostState) return
 
     driftRef.current = setInterval(() => {
-      const v = videoRef.current
+      const v = document.querySelector('video')
       if (!v || !hostState) return
       const latency = (Date.now() - hostState.timestamp) / 1000
       const hostAdjusted = hostState.currentTime + (hostState.isPlaying ? latency : 0)
@@ -142,7 +141,7 @@ export default function PartyPlayer({
   }, [hostState, isDetached, isHost])
 
   const handleResync = useCallback(() => {
-    const v = videoRef.current
+    const v = document.querySelector('video')
     if (!v || !hostState) return
     v.currentTime = hostState.currentTime + 0.5
     setDrift(0)
