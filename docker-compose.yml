@@ -54,7 +54,7 @@ services:
       - TZ=Europe/London
       - SEERR_URL=http://jellysea:5055
       - NEXT_PUBLIC_JELLYFIN_URL=https://watch.teckent.dev
-      - NEXT_PUBLIC_SIGNALING_URL=ws://jellysea-vp:8004
+      - NEXT_PUBLIC_SIGNALING_URL=wss://test.tecknet.dev/vp
     restart: unless-stopped
 
   jellysea-vp:
