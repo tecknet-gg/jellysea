@@ -669,6 +669,7 @@ const PartyRoomPage: NextPage = () => {
           posterPath={party.media.posterPath}
           seasonNumber={party.media.seasonNumber}
           episodeNumber={party.media.episodeNumber}
+          partyId={typeof partyId === 'string' ? partyId : undefined}
           isHost={isHost}
           wsRef={wsRef}
           startAt={playerStartAt}

@@ -2,10 +2,9 @@ import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import VideoPlayer from '@app/components/VideoPlayer'
 import DriftOverlay from '@app/components/WatchParty/DriftOverlay'
-import usePlaybackProgress from '@app/hooks/usePlaybackProgress'
-import type { ResolveResult } from '@app/hooks/useJellyfinStream'
 
 interface SyncPing { currentTime: number; isPlaying: boolean; timestamp: number }
+interface PreloadedStream { type: 'direct' | 'hls'; url: string; seasonNumber?: number; episodeNumber?: number }
 
 interface PartyPlayerProps {
   tmdbId: number
@@ -14,6 +13,7 @@ interface PartyPlayerProps {
   posterPath?: string
   seasonNumber?: number
   episodeNumber?: number
+  partyId: string | undefined
   isHost: boolean
   wsRef: React.RefObject<WebSocket | null>
   startAt: number | null
@@ -21,21 +21,27 @@ interface PartyPlayerProps {
   hostState: SyncPing | null
   isDetached: boolean
   onToggleDetach: () => void
-  preloadedStream?: { type: 'direct' | 'hls'; url: string; seasonNumber?: number; episodeNumber?: number } | null
+  preloadedStream?: PreloadedStream | null
 }
 
 export default function PartyPlayer({
   tmdbId, mediaType, title, posterPath, seasonNumber, episodeNumber,
-  isHost, wsRef, startAt, onClose, hostState, isDetached, onToggleDetach, preloadedStream,
+  partyId, isHost, wsRef, startAt, onClose, hostState, isDetached, onToggleDetach, preloadedStream,
 }: PartyPlayerProps) {
-  const [resolved, setResolved] = useState<ResolveResult | null>(null)
+  const [resolved, setResolved] = useState<{ type: 'direct' | 'hls'; url: string; seasonNumber?: number; episodeNumber?: number } | null>(null)
+  const [error, setError] = useState<string | null>(null)
   const [resolving, setResolving] = useState(true)
   const [countdown, setCountdown] = useState(-1)
-  const videoRef = useRef<HTMLVideoElement | null>(null)
-  const { loadProgress } = usePlaybackProgress()
+  const [drift, setDrift] = useState<number | null>(null)
   const pingRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const driftRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
-  useEffect(() => { return () => { if (pingRef.current) clearInterval(pingRef.current) } }, [])
+  useEffect(() => {
+    return () => {
+      if (pingRef.current) clearInterval(pingRef.current)
+      if (driftRef.current) clearInterval(driftRef.current)
+    }
+  }, [])
 
   useEffect(() => {
     if (!startAt) return
@@ -45,12 +51,15 @@ export default function PartyPlayer({
       if (diff <= 0) {
         setCountdown(0)
         if (preloadedStream) {
-          setResolved({ type: preloadedStream.type, url: preloadedStream.url, error: null, seasonNumber: preloadedStream.seasonNumber, episodeNumber: preloadedStream.episodeNumber })
+          setResolved({ type: preloadedStream.type, url: preloadedStream.url, seasonNumber: preloadedStream.seasonNumber, episodeNumber: preloadedStream.episodeNumber })
           setResolving(false)
         } else {
           resolveStream()
         }
-      } else { setCountdown(diff); timeout = setTimeout(update, 200) }
+      } else {
+        setCountdown(diff)
+        timeout = setTimeout(update, 200)
+      }
     }
     update()
     return () => clearTimeout(timeout)
@@ -58,35 +67,41 @@ export default function PartyPlayer({
 
   const resolveStream = async () => {
     setResolving(true)
+    setError(null)
     try {
       const qs = seasonNumber != null ? `&seasonNumber=${seasonNumber}&episodeNumber=${episodeNumber}` : ''
       const res = await fetch(`/api/v1/media/${tmdbId}/play?mediaType=${mediaType}${qs}`)
+      if (!res.ok) throw new Error('Failed to resolve stream')
       const data = await res.json()
+      if (!data?.url) throw new Error('No stream URL')
       setResolved(data)
-    } catch { onClose() }
-    finally { setResolving(false) }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Stream error')
+    } finally {
+      setResolving(false)
+    }
   }
 
   useEffect(() => {
-    if (!resolved?.url || !isHost || !wsRef.current) return
+    if (!resolved?.url || !isHost || !wsRef.current || !partyId) return
     pingRef.current = setInterval(() => {
       const v = document.querySelector('video')
       if (!v || !wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return
       wsRef.current.send(JSON.stringify({
         type: 'sync-ping',
-        roomId: '',
+        roomId: partyId,
         payload: { currentTime: v.currentTime, isPlaying: !v.paused, timestamp: Date.now() },
         senderId: '',
       }))
     }, 3000)
     return () => { if (pingRef.current) clearInterval(pingRef.current) }
-  }, [resolved?.url, isHost, wsRef])
+  }, [resolved?.url, isHost, wsRef, partyId])
 
   useEffect(() => {
     if (!hostState || isDetached || isHost) return
     const v = document.querySelector('video')
     if (!v) return
-    if (hostState.isPlaying && v.paused) v.play().catch(() => {})
+    if (hostState.isPlaying && v.paused) { v.play().catch(() => {}) }
     if (!hostState.isPlaying && !v.paused) {
       const latency = (Date.now() - hostState.timestamp) / 1000
       const hostAdjusted = hostState.currentTime + (hostState.isPlaying ? latency : 0)
@@ -94,13 +109,17 @@ export default function PartyPlayer({
     }
   }, [hostState, isDetached, isHost])
 
-  const getDrift = (): number | null => {
-    const v = document.querySelector('video')
-    if (!v || !hostState || isDetached) return null
-    const latency = (Date.now() - hostState.timestamp) / 1000
-    const hostAdjusted = hostState.currentTime + (hostState.isPlaying ? latency : 0)
-    return Math.round((v.currentTime - hostAdjusted) * 10) / 10
-  }
+  useEffect(() => {
+    if (!hostState || isDetached || isHost) { setDrift(null); return }
+    driftRef.current = setInterval(() => {
+      const v = document.querySelector('video')
+      if (!v || !hostState) return
+      const latency = (Date.now() - hostState.timestamp) / 1000
+      const hostAdjusted = hostState.currentTime + (hostState.isPlaying ? latency : 0)
+      setDrift(Math.round((v.currentTime - hostAdjusted) * 10) / 10)
+    }, 500)
+    return () => { if (driftRef.current) clearInterval(driftRef.current) }
+  }, [hostState, isDetached, isHost])
 
   const handleResync = () => {
     const v = document.querySelector('video')
@@ -108,10 +127,23 @@ export default function PartyPlayer({
     v.currentTime = hostState.currentTime + 0.5
   }
 
-  const drift = hostState && !isDetached ? getDrift() : null
-  const resumePos = seasonNumber != null && episodeNumber != null
-    ? loadProgress(tmdbId, mediaType, seasonNumber, episodeNumber)?.position
-    : loadProgress(tmdbId, mediaType)?.position
+  const retryResolve = () => {
+    setError(null)
+    resolveStream()
+  }
+
+  if (error) {
+    return (
+      <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black">
+        <div className="text-center">
+          <p className="mb-4 text-lg text-red-400">Failed to start playback</p>
+          <p className="mb-6 text-sm text-slate-400">{error}</p>
+          <button onClick={retryResolve} className="rounded-lg bg-indigo-600 px-4 py-2 text-sm text-white hover:bg-indigo-500">Retry</button>
+          <button onClick={onClose} className="ml-3 rounded-lg bg-white/10 px-4 py-2 text-sm text-white/80 hover:bg-white/20">Cancel</button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <>
@@ -134,11 +166,11 @@ export default function PartyPlayer({
       {countdown === 0 && resolved?.url && createPortal(
         <>
           <VideoPlayer
-            type={resolved.type || 'hls'}
+            type={(resolved.type as 'direct' | 'hls') || 'hls'}
             streamUrl={resolved.url}
             title={title}
             posterUrl={posterPath ? `https://image.tmdb.org/t/p/w500${posterPath}` : undefined}
-            initialPosition={resumePos}
+            initialPosition={0}
             tmdbId={tmdbId}
             mediaType={mediaType}
             seasonNumber={seasonNumber ?? resolved.seasonNumber}
