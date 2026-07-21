@@ -20,7 +20,7 @@ export function handleSignaling(ws: WebSocket, msg: SignalMessage): void {
     return
   }
 
-  if (type === 'chat') {
+  if (type === 'chat' || type === 'media-start' || type === 'sync-ping') {
     const peers = getRoomPeers(roomId)
     for (const peer of peers) {
       if (peer.peerId !== msg.senderId && peer.ws.readyState === WebSocket.OPEN) {

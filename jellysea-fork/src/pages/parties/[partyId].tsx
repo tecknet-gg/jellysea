@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/router'
 import Link from 'next/link'
-import { TrashIcon, UserMinusIcon, ArrowPathIcon } from '@heroicons/react/24/outline'
+import { TrashIcon, UserMinusIcon, ArrowPathIcon, PlayIcon } from '@heroicons/react/24/outline'
 import useSWR from 'swr'
 import { useUser, Permission } from '@app/hooks/useUser'
 import CachedImage from '@app/components/Common/CachedImage'
@@ -10,6 +10,7 @@ import api from '@app/utils/api'
 import { fetchParties, checkPartyPassword, updatePartyMedia, updatePartyStatus, deleteParty, unbanUser } from '@app/utils/partyApi'
 import LibraryBrowserModal from '@app/components/WatchParty/LibraryBrowserModal'
 import SeasonEpisodeSelector from '@app/components/WatchParty/SeasonEpisodeSelector'
+import PartyPlayer from '@app/components/WatchParty/PartyPlayer'
 import type { Party, PartyMedia } from '@app/utils/partyTypes'
 import type { NextPage } from 'next'
 
@@ -43,6 +44,10 @@ const PartyRoomPage: NextPage = () => {
   const [liveMembers, setLiveMembers] = useState(0)
   const [myPeerId, setMyPeerId] = useState<string | null>(null)
   const [otherMembers, setOtherMembers] = useState<{ id: string; displayName: string; avatar?: string }[]>([])
+  const [playerActive, setPlayerActive] = useState(false)
+  const [playerStartAt, setPlayerStartAt] = useState<number | null>(null)
+  const [hostSyncState, setHostSyncState] = useState<{ currentTime: number; isPlaying: boolean; timestamp: number } | null>(null)
+  const [isDetached, setIsDetached] = useState(false)
   const [messages, setMessages] = useState<{ id: string; senderName: string; text: string; timestamp: number }[]>([])
   const [chatInput, setChatInput] = useState('')
   const [showMediaSearch, setShowMediaSearch] = useState(false)
@@ -78,6 +83,11 @@ const PartyRoomPage: NextPage = () => {
       const p = list.find((x) => x.id === partyId)
       if (p) {
         setParty(p)
+        if (user && p.bannedUserIds.includes(String(user.id))) {
+          setError('You have been banned from this party')
+          setLoading(false)
+          return
+        }
         if (!p.hasPassword) setAuthed(true)
       } else {
         setError('Party not found')
@@ -191,6 +201,16 @@ const PartyRoomPage: NextPage = () => {
         if (wsRef.current) wsRef.current.close()
         router.push('/parties')
       }
+
+      if (msg.type === 'media-start' && !isHost) {
+        const p = msg.payload as { startAt: number; tmdbId: number; mediaType: 'movie' | 'tv'; title: string; posterPath?: string; seasonNumber?: number; episodeNumber?: number }
+        setPlayerStartAt(p.startAt)
+        setPlayerActive(true)
+      }
+
+      if (msg.type === 'sync-ping' && !isHost && !isDetached) {
+        setHostSyncState(msg.payload as { currentTime: number; isPlaying: boolean; timestamp: number })
+      }
     }
 
     ws.onclose = () => {
@@ -283,6 +303,27 @@ const PartyRoomPage: NextPage = () => {
       await refreshParty()
     } catch { /* ignore */ }
   }, [partyId, refreshParty])
+
+  const handleStartWatching = useCallback(() => {
+    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN || !party?.media) return
+    const startAt = Date.now() + 5000
+    setPlayerStartAt(startAt)
+    setPlayerActive(true)
+    const m = party.media
+    wsRef.current.send(JSON.stringify({
+      type: 'media-start',
+      roomId: partyId,
+      payload: { startAt, tmdbId: m.tmdbId, mediaType: m.mediaType, title: m.title, posterPath: m.posterPath, seasonNumber: m.seasonNumber, episodeNumber: m.episodeNumber },
+      senderId: '',
+    }))
+  }, [partyId, party?.media, wsRef])
+
+  const handleClosePlayer = useCallback(() => {
+    setPlayerActive(false)
+    setPlayerStartAt(null)
+    setHostSyncState(null)
+    setIsDetached(false)
+  }, [])
 
   const mediaDetailsEndpoint = party?.media
     ? `/${party.media.mediaType === 'movie' ? 'movie' : 'tv'}/${party.media.tmdbId}`
@@ -456,7 +497,7 @@ const PartyRoomPage: NextPage = () => {
                     </div>
                   )}
                   {isHost && (
-                    <div className="mt-3 flex gap-2">
+                    <div className="mt-3 flex flex-wrap gap-2">
                       <button
                         onClick={() => setShowMediaSearch(true)}
                         className="rounded-lg bg-indigo-600/80 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-500"
@@ -468,6 +509,13 @@ const PartyRoomPage: NextPage = () => {
                         className="rounded-lg bg-red-500/20 px-3 py-1.5 text-xs font-medium text-red-400 hover:bg-red-500/30"
                       >
                         Remove
+                      </button>
+                      <button
+                        onClick={handleStartWatching}
+                        className="flex items-center gap-1 rounded-lg bg-green-600/80 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-500"
+                      >
+                        <PlayIcon className="h-3.5 w-3.5" />
+                        Start Watching
                       </button>
                     </div>
                   )}
@@ -585,6 +633,24 @@ const PartyRoomPage: NextPage = () => {
       </div>
 
       <LibraryBrowserModal open={showMediaSearch} onClose={() => setShowMediaSearch(false)} onSelect={handleSelectMedia} />
+
+      {playerActive && party?.media && (
+        <PartyPlayer
+          tmdbId={party.media.tmdbId}
+          mediaType={party.media.mediaType}
+          title={party.media.title}
+          posterPath={party.media.posterPath}
+          seasonNumber={party.media.seasonNumber}
+          episodeNumber={party.media.episodeNumber}
+          isHost={isHost}
+          wsRef={wsRef}
+          startAt={playerStartAt}
+          onClose={handleClosePlayer}
+          hostState={hostSyncState}
+          isDetached={isDetached}
+          onToggleDetach={() => setIsDetached((d) => !d)}
+        />
+      )}
     </div>
   )
 }

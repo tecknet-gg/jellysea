@@ -76,6 +76,18 @@ export function handleConnection(ws: WebSocket): void {
         : uuid().slice(0, 8)
 
       const existing = getRoom(newRoomId)
+      const peerConn = getConnection(peerId)
+
+      if (existing && peerConn?.userInfo?.userId && isBanned(newRoomId, peerConn.userInfo.userId)) {
+        ws.send(JSON.stringify({
+          type: 'error',
+          roomId: newRoomId,
+          payload: { message: 'You have been banned from this party' },
+          senderId: 'server',
+        }))
+        return
+      }
+
       if (existing) {
         addPeerToRoom(newRoomId, getConnection(peerId)!)
         roomId = newRoomId

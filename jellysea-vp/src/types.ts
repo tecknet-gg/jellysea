@@ -17,6 +17,8 @@ export type SignalType =
   | 'kick-member'
   | 'kicked'
   | 'party-ended'
+  | 'media-start'
+  | 'sync-ping'
   | 'offer'
   | 'answer'
   | 'ice-candidate'

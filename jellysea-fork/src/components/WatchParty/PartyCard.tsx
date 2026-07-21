@@ -84,7 +84,7 @@ export default function PartyCard({ party }: { party: Party }) {
         </div>
       </div>
 
-      {party.media?.posterPath && (
+      {party.media?.posterPath ? (
         <div className="w-14 flex-shrink-0 overflow-hidden rounded-md shadow-sm sm:w-20">
           <CachedImage
             type="tmdb"
@@ -93,6 +93,10 @@ export default function PartyCard({ party }: { party: Party }) {
             className="w-full"
             style={{ aspectRatio: '600/900' }}
           />
+        </div>
+      ) : (
+        <div className="w-14 flex-shrink-0 overflow-hidden rounded-md bg-dark-800 shadow-sm sm:w-20" style={{ aspectRatio: '600/900' }}>
+          <div className="flex h-full w-full items-center justify-center text-[10px] text-slate-600">N/A</div>
         </div>
       )}
     </Link>
