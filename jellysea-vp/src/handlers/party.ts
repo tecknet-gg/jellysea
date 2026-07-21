@@ -84,7 +84,7 @@ router.patch('/api/parties/:id', (req, res) => {
   const body = req.body as Partial<Party>
   if (body.name !== undefined) party.name = body.name
   if (body.status !== undefined) party.status = body.status
-  if (body.media !== undefined) party.media = body.media
+  if ('media' in req.body) party.media = req.body.media ?? undefined
   const room = getRoom(party.id)
   res.json({ ...party, memberCount: room?.peers.size ?? 0, passwordHash: undefined })
 })

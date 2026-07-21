@@ -32,7 +32,7 @@ export async function checkPartyPassword(id: string, password: string): Promise<
   }
 }
 
-export async function updatePartyMedia(id: string, media: PartyMedia): Promise<Party> {
+export async function updatePartyMedia(id: string, media: PartyMedia | null): Promise<Party> {
   const { data } = await api.patch<Party>(`/api/parties/${id}`, { media })
   return data
 }

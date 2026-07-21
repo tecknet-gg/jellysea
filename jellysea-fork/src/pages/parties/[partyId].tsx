@@ -7,6 +7,7 @@ import CachedImage from '@app/components/Common/CachedImage'
 import LoadingSpinner from '@app/components/Common/LoadingSpinner'
 import { fetchParties, checkPartyPassword, updatePartyMedia, updatePartyStatus, deleteParty } from '@app/utils/partyApi'
 import LibraryBrowserModal from '@app/components/WatchParty/LibraryBrowserModal'
+import SeasonEpisodeSelector from '@app/components/WatchParty/SeasonEpisodeSelector'
 import type { Party, PartyMedia } from '@app/utils/partyTypes'
 import type { NextPage } from 'next'
 
@@ -44,6 +45,8 @@ const PartyRoomPage: NextPage = () => {
   const [chatInput, setChatInput] = useState('')
   const [showMediaSearch, setShowMediaSearch] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [selectedSeason, setSelectedSeason] = useState<number | undefined>(undefined)
+  const [selectedEpisode, setSelectedEpisode] = useState<number | undefined>(undefined)
 
   const wsRef = useRef<WebSocket | null>(null)
   const myPeerIdRef = useRef<string | null>(null)
@@ -84,6 +87,11 @@ const PartyRoomPage: NextPage = () => {
     const timer = setInterval(refreshParty, 5000)
     return () => clearInterval(timer)
   }, [authed, partyId, refreshParty])
+
+  useEffect(() => {
+    if (party?.media?.seasonNumber) setSelectedSeason(party.media.seasonNumber)
+    if (party?.media?.episodeNumber) setSelectedEpisode(party.media.episodeNumber)
+  }, [party?.media?.seasonNumber, party?.media?.episodeNumber])
 
   const handlePasswordSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault()
@@ -219,10 +227,22 @@ const PartyRoomPage: NextPage = () => {
     } catch { /* ignore */ }
   }, [partyId, refreshParty])
 
+  const handleSeasonEpisodeUpdate = useCallback(async () => {
+    if (!partyId || typeof partyId !== 'string' || !party?.media) return
+    try {
+      await updatePartyMedia(partyId, {
+        ...party.media,
+        seasonNumber: selectedSeason,
+        episodeNumber: selectedEpisode,
+      })
+      await refreshParty()
+    } catch { /* ignore */ }
+  }, [partyId, party?.media, selectedSeason, selectedEpisode, refreshParty])
+
   const handleRemoveMedia = useCallback(async () => {
     if (!partyId || typeof partyId !== 'string') return
     try {
-      await updatePartyMedia(partyId, undefined as unknown as PartyMedia)
+      await updatePartyMedia(partyId, null)
       await updatePartyStatus(partyId, 'waiting')
       await refreshParty()
     } catch { /* ignore */ }
@@ -359,6 +379,31 @@ const PartyRoomPage: NextPage = () => {
                   </p>
                   {party.media.overview && (
                     <p className="mt-2 line-clamp-3 text-sm text-slate-300">{party.media.overview}</p>
+                  )}
+                  {party.media.mediaType === 'tv' && (
+                    <div className="mt-3">
+                      <SeasonEpisodeSelector
+                        tmdbId={party.media.tmdbId}
+                        initialSeason={party.media.seasonNumber}
+                        initialEpisode={party.media.episodeNumber}
+                        onSeasonChange={(s) => setSelectedSeason(s)}
+                        onEpisodeChange={(e) => setSelectedEpisode(e)}
+                      />
+                      {isHost && selectedSeason && selectedEpisode && (
+                        <button
+                          onClick={handleSeasonEpisodeUpdate}
+                          className="mt-2 rounded-lg bg-indigo-600/80 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-500"
+                        >
+                          Update Season / Episode
+                        </button>
+                      )}
+                      {party.media.seasonNumber && (
+                        <p className="mt-1 text-xs text-slate-400">
+                          Season {party.media.seasonNumber}
+                          {party.media.episodeNumber ? `, Episode ${party.media.episodeNumber}` : ''}
+                        </p>
+                      )}
+                    </div>
                   )}
                   {isHost && (
                     <div className="mt-3 flex gap-2">
