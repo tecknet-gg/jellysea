@@ -55,13 +55,14 @@ export function handleConnection(ws: WebSocket): void {
     msg.senderId = peerId
 
     if (msg.type === 'set-user-info') {
-      const info = msg.payload as { displayName?: string; avatar?: string }
+      const info = msg.payload as { displayName?: string; avatar?: string; userId?: string }
       const conn = getConnection(peerId)
       if (conn) {
         conn.userInfo = {
           id: peerId,
           displayName: info.displayName || 'Anonymous',
           avatar: info.avatar,
+          userId: info.userId,
         }
         displayName = conn.userInfo.displayName
       }
@@ -173,6 +174,7 @@ function broadcastPeers(roomId: string): void {
     id: p.peerId,
     displayName: p.userInfo.displayName,
     avatar: p.userInfo.avatar,
+    userId: p.userInfo.userId,
   }))
 
   const msg = JSON.stringify({

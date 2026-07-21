@@ -1,8 +1,10 @@
 import { Fragment, useState, useEffect } from 'react'
 import { Dialog, Transition } from '@headlessui/react'
-import { XMarkIcon, FilmIcon } from '@heroicons/react/24/outline'
+import { XMarkIcon, FilmIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
+import useSWR from 'swr'
 import CachedImage from '@app/components/Common/CachedImage'
 import api from '@app/utils/api'
+import { MediaStatus } from '@app/utils/types'
 import type { PartyMedia } from '@app/utils/partyTypes'
 
 interface LibraryBrowserModalProps {
@@ -11,9 +13,17 @@ interface LibraryBrowserModalProps {
   onSelect: (media: PartyMedia) => void
 }
 
-interface MediaItem {
+interface MediaResult {
+  id: number
   tmdbId: number
+  tvdbId?: number
   mediaType: 'movie' | 'tv'
+  status: MediaStatus
+}
+
+interface MediaResultsResponse {
+  pageInfo: { pages: number; pageSize: number; results: number; page: number }
+  results: MediaResult[]
 }
 
 interface MediaDetails {
@@ -28,37 +38,37 @@ interface MediaDetails {
 }
 
 export default function LibraryBrowserModal({ open, onClose, onSelect }: LibraryBrowserModalProps) {
-  const [items, setItems] = useState<{ tmdbId: number; mediaType: 'movie' | 'tv'; details?: MediaDetails }[]>([])
-  const [loading, setLoading] = useState(true)
+  const { data, error } = useSWR<MediaResultsResponse>(
+    open ? '/media?filter=allavailable&take=200&sort=title' : null,
+    (url: string) => api.get(url).then((res) => res.data),
+    { revalidateOnFocus: false, dedupingInterval: 30000 }
+  )
+  const [details, setDetails] = useState<Map<number, MediaDetails>>(new Map())
+
+  const results = data?.results ?? []
 
   useEffect(() => {
-    if (!open) {
-      setItems([])
-      setLoading(true)
-      return
-    }
-    setLoading(true)
-    ;(async () => {
-      try {
-        const { data } = await api.get<{ results: MediaItem[] }>('/media?filter=allavailable&take=200&sort=title')
-        const results = data.results ?? []
-        const enriched: { tmdbId: number; mediaType: 'movie' | 'tv'; details?: MediaDetails }[] = results.map((r) => ({ ...r }))
-        setItems(enriched)
-        for (let i = 0; i < enriched.length; i += 10) {
-          const batch = enriched.slice(i, i + 10)
-          await Promise.all(batch.map(async (item) => {
-            try {
-              const ep = item.mediaType === 'movie' ? `/movie/${item.tmdbId}` : `/tv/${item.tmdbId}`
-              const { data: d } = await api.get<MediaDetails>(ep)
-              item.details = d
-            } catch { /* skip */ }
-          }))
-          setItems([...enriched])
-        }
-      } catch { /* ignore */ }
-      setLoading(false)
-    })()
+    if (!open) { setDetails(new Map()); return }
   }, [open])
+
+  useEffect(() => {
+    if (results.length === 0) return
+    ;(async () => {
+      const map = new Map<number, MediaDetails>()
+      for (let i = 0; i < results.length; i += 10) {
+        const batch = results.slice(i, i + 10)
+        await Promise.all(batch.map(async (item) => {
+          if (map.has(item.tmdbId)) return
+          try {
+            const ep = item.mediaType === 'movie' ? `/movie/${item.tmdbId}` : `/tv/${item.tmdbId}`
+            const { data: d } = await api.get<MediaDetails>(ep)
+            map.set(item.tmdbId, d)
+          } catch { /* skip */ }
+        }))
+        setDetails(new Map(map))
+      }
+    })()
+  }, [results])
 
   return (
     <Transition show={open} as={Fragment}>
@@ -85,20 +95,28 @@ export default function LibraryBrowserModal({ open, onClose, onSelect }: Library
               </div>
 
               <div className="flex-1 overflow-y-auto p-5">
-                {loading && items.length === 0 && (
+                {!data && !error && (
                   <div className="flex justify-center py-16">
                     <div className="h-6 w-6 animate-spin rounded-full border-2 border-solid border-indigo-500 border-t-transparent" />
                   </div>
                 )}
 
-                {!loading && items.length === 0 && (
-                  <p className="py-16 text-center text-sm text-slate-500">Your library is empty</p>
+                {error && (
+                  <div className="flex flex-col items-center gap-3 py-16">
+                    <ExclamationTriangleIcon className="h-8 w-8 text-red-400" />
+                    <p className="text-sm text-red-400">Failed to load library</p>
+                    <p className="text-xs text-slate-500">Make sure you are logged in and have media available</p>
+                  </div>
                 )}
 
-                {items.length > 0 && (
+                {data && results.length === 0 && (
+                  <p className="py-16 text-center text-sm text-slate-500">No available media found in your library</p>
+                )}
+
+                {results.length > 0 && (
                   <div className="flex flex-wrap justify-center gap-4 sm:justify-start">
-                    {items.map((item) => {
-                      const d = item.details
+                    {results.map((item) => {
+                      const d = details.get(item.tmdbId)
                       const title = d?.title || d?.name || ''
                       const year = (d?.releaseDate || d?.firstAirDate || '').slice(0, 4)
                       return (
@@ -124,7 +142,7 @@ export default function LibraryBrowserModal({ open, onClose, onSelect }: Library
                               <FilmIcon className="h-8 w-8 text-slate-600" />
                             </div>
                           )}
-                          <p className="mt-1.5 truncate text-xs font-medium text-slate-300">{title || 'Loading...'}</p>
+                          <p className="mt-1.5 truncate text-xs font-medium text-slate-300">{title || (d ? '' : 'Loading...')}</p>
                           {year && <p className="text-[10px] text-slate-500">{year}</p>}
                         </button>
                       )
@@ -133,9 +151,9 @@ export default function LibraryBrowserModal({ open, onClose, onSelect }: Library
                 )}
               </div>
 
-              {items.length > 0 && (
+              {results.length > 0 && (
                 <div className="border-t border-dark-600 px-5 py-2 text-center text-xs text-slate-500">
-                  {items.length} title{items.length !== 1 ? 's' : ''}
+                  {results.length} title{results.length !== 1 ? 's' : ''}
                 </div>
               )}
             </Dialog.Panel>

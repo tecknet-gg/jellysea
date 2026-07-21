@@ -38,12 +38,15 @@ const PartyRoomPage: NextPage = () => {
   const [connectionState, setConnectionState] = useState('disconnected')
   const [roomJoined, setRoomJoined] = useState(false)
   const [liveMembers, setLiveMembers] = useState(0)
+  const [myPeerId, setMyPeerId] = useState<string | null>(null)
+  const [otherMembers, setOtherMembers] = useState<{ displayName: string; avatar?: string }[]>([])
   const [messages, setMessages] = useState<{ id: string; senderName: string; text: string; timestamp: number }[]>([])
   const [chatInput, setChatInput] = useState('')
   const [showMediaSearch, setShowMediaSearch] = useState(false)
   const [deleting, setDeleting] = useState(false)
 
   const wsRef = useRef<WebSocket | null>(null)
+  const myPeerIdRef = useRef<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const signalingUrl =
@@ -107,7 +110,7 @@ const PartyRoomPage: NextPage = () => {
       ws.send(JSON.stringify({
         type: 'set-user-info',
         roomId: '',
-        payload: { displayName: user?.displayName || user?.username || 'Anonymous', avatar: user?.avatar },
+        payload: { displayName: user?.displayName || user?.username || 'Anonymous', avatar: user?.avatar, userId: String(user?.id) },
         senderId: '',
       }))
     }
@@ -116,6 +119,8 @@ const PartyRoomPage: NextPage = () => {
       const msg = JSON.parse(event.data)
 
       if (msg.type === 'peer-id') {
+        myPeerIdRef.current = msg.payload.peerId
+        setMyPeerId(msg.payload.peerId)
         ws.send(JSON.stringify({
           type: 'join-room',
           roomId: partyId,
@@ -140,6 +145,17 @@ const PartyRoomPage: NextPage = () => {
 
       if (msg.type === 'room-state') {
         setLiveMembers(msg.payload.peers?.length ?? 0)
+        const pid = myPeerIdRef.current
+        if (msg.payload.peers && pid) {
+          setOtherMembers(
+            msg.payload.peers.filter((p: { id: string; userId?: string }) =>
+              p.id !== pid && p.userId !== party?.hostId
+            ).map((p: { displayName: string; avatar?: string }) => ({
+              displayName: p.displayName,
+              avatar: p.avatar,
+            }))
+          )
+        }
       }
 
       if (msg.type === 'chat') {
@@ -417,6 +433,23 @@ const PartyRoomPage: NextPage = () => {
                   {PARTY_STATUS_LABELS[party.status] || party.status}
                 </span>
               </div>
+              {otherMembers.length > 0 && (
+                <div>
+                  <p className="text-xs text-slate-500">Members ({otherMembers.length})</p>
+                  <div className="mt-1 space-y-1">
+                    {otherMembers.map((m, i) => (
+                      <div key={i} className="flex items-center gap-1.5">
+                        {m.avatar ? (
+                          <CachedImage type="avatar" src={m.avatar} alt="" className="h-4 w-4 rounded-full object-cover" />
+                        ) : (
+                          <div className="h-4 w-4 rounded-full bg-dark-700" />
+                        )}
+                        <span className="text-sm text-slate-300">{m.displayName}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
               {party.media && (
                 <div>
                   <p className="text-xs text-slate-500">Now Watching</p>

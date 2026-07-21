@@ -32,6 +32,7 @@ export interface PeerInfo {
   id: string
   displayName: string
   avatar?: string
+  userId?: string
 }
 
 import type { WebSocket } from 'ws'
