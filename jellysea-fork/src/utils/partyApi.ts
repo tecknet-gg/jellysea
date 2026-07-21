@@ -45,3 +45,7 @@ export async function updatePartyStatus(id: string, status: Party['status']): Pr
 export async function deleteParty(id: string): Promise<void> {
   await api.delete(`/api/parties/${id}`)
 }
+
+export async function unbanUser(partyId: string, userId: string): Promise<void> {
+  await api.post(`/api/parties/${partyId}/unban`, { userId })
+}

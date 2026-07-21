@@ -80,7 +80,7 @@ export default function CreatePartyModal({ open, onClose, onSubmit }: CreatePart
                     type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder="e.g. Friday Movie Night"
+                    placeholder="tecknet's basement"
                     maxLength={50}
                     required
                     className="w-full rounded-lg border border-dark-600 bg-dark-800 px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-indigo-500 focus:outline-none"

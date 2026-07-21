@@ -6,6 +6,8 @@ export interface Party {
   hostId: string
   hostName: string
   hostAvatar?: string
+  bannedUserIds: string[]
+  bannedUsers: { userId: string; displayName: string }[]
   media?: {
     tmdbId: number
     mediaType: 'movie' | 'tv'

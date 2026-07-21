@@ -1,13 +1,13 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/router'
 import Link from 'next/link'
-import { TrashIcon, UserMinusIcon } from '@heroicons/react/24/outline'
+import { TrashIcon, UserMinusIcon, ArrowPathIcon } from '@heroicons/react/24/outline'
 import useSWR from 'swr'
-import { useUser } from '@app/hooks/useUser'
+import { useUser, Permission } from '@app/hooks/useUser'
 import CachedImage from '@app/components/Common/CachedImage'
 import LoadingSpinner from '@app/components/Common/LoadingSpinner'
 import api from '@app/utils/api'
-import { fetchParties, checkPartyPassword, updatePartyMedia, updatePartyStatus, deleteParty } from '@app/utils/partyApi'
+import { fetchParties, checkPartyPassword, updatePartyMedia, updatePartyStatus, deleteParty, unbanUser } from '@app/utils/partyApi'
 import LibraryBrowserModal from '@app/components/WatchParty/LibraryBrowserModal'
 import SeasonEpisodeSelector from '@app/components/WatchParty/SeasonEpisodeSelector'
 import type { Party, PartyMedia } from '@app/utils/partyTypes'
@@ -29,7 +29,7 @@ const PARTY_STATUS_COLORS: Record<string, string> = {
 
 const PartyRoomPage: NextPage = () => {
   const router = useRouter()
-  const { user } = useUser()
+  const { user, hasPermission } = useUser()
   const { partyId } = router.query
 
   const [party, setParty] = useState<Party | null>(null)
@@ -60,6 +60,8 @@ const PartyRoomPage: NextPage = () => {
       : 'wss://test.tecknet.dev/vp'
 
   const isHost = user && party ? String(user.id) === party.hostId : false
+  const isAdmin = hasPermission(Permission.ADMIN)
+  const canManage = isHost || isAdmin
 
   const refreshParty = useCallback(async () => {
     if (!partyId || typeof partyId !== 'string') return
@@ -274,6 +276,14 @@ const PartyRoomPage: NextPage = () => {
     }))
   }, [partyId])
 
+  const handleUnban = useCallback(async (userId: string) => {
+    if (!partyId || typeof partyId !== 'string') return
+    try {
+      await unbanUser(partyId, userId)
+      await refreshParty()
+    } catch { /* ignore */ }
+  }, [partyId, refreshParty])
+
   const mediaDetailsEndpoint = party?.media
     ? `/${party.media.mediaType === 'movie' ? 'movie' : 'tv'}/${party.media.tmdbId}`
     : null
@@ -473,7 +483,7 @@ const PartyRoomPage: NextPage = () => {
             <div className="h-72 overflow-y-auto p-4">
               {messages.length === 0 && (
                 <p className="pt-8 text-center text-sm text-slate-500">
-                  No messages yet. Start the conversation!
+                  Nothing to see here yet...
                 </p>
               )}
               {messages.map((m) => (
@@ -534,13 +544,34 @@ const PartyRoomPage: NextPage = () => {
                           <div className="h-4 w-4 rounded-full bg-dark-700" />
                         )}
                         <span className="flex-1 text-sm text-slate-300">{m.displayName}</span>
-                        {isHost && (
+        {canManage && (
                           <button
                             onClick={() => handleKickMember(m.id)}
                             className="rounded p-0.5 text-slate-500 hover:bg-red-500/20 hover:text-red-400"
                             title="Remove member"
                           >
                             <UserMinusIcon className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {party.bannedUsers && party.bannedUsers.length > 0 && (
+                <div>
+                  <p className="text-xs text-slate-500">Banned</p>
+                  <div className="mt-1 space-y-1">
+                    {party.bannedUsers.map((b, i) => (
+                      <div key={i} className="flex items-center gap-1.5">
+                        <span className="flex-1 text-sm text-slate-400 line-through">{b.displayName}</span>
+                        {(isHost || isAdmin) && (
+                          <button
+                            onClick={() => handleUnban(b.userId)}
+                            className="rounded p-0.5 text-slate-500 hover:bg-green-500/20 hover:text-green-400"
+                            title="Unban"
+                          >
+                            <ArrowPathIcon className="h-3.5 w-3.5" />
                           </button>
                         )}
                       </div>

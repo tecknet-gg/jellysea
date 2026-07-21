@@ -29,6 +29,8 @@ router.post('/api/parties', (req, res) => {
     id,
     name: body.name,
     hasPassword: !!body.password,
+    bannedUserIds: [],
+    bannedUsers: [],
     hostId: body.hostId,
     hostName: body.hostName,
     hostAvatar: body.hostAvatar,
@@ -103,6 +105,34 @@ router.delete('/api/parties/:id', (req, res) => {
     }
   }
   parties.delete(req.params.id)
+  res.json({ ok: true })
+})
+
+export function banMember(partyId: string, userId: string, displayName?: string): void {
+  const party = parties.get(partyId)
+  if (party && !party.bannedUserIds.includes(userId)) {
+    party.bannedUserIds.push(userId)
+    party.bannedUsers.push({ userId, displayName: displayName || userId })
+  }
+}
+
+export function unbanMember(partyId: string, userId: string): void {
+  const party = parties.get(partyId)
+  if (party) {
+    party.bannedUserIds = party.bannedUserIds.filter((id) => id !== userId)
+    party.bannedUsers = party.bannedUsers.filter((u) => u.userId !== userId)
+  }
+}
+
+export function isBanned(partyId: string, userId: string): boolean {
+  const party = parties.get(partyId)
+  return party ? party.bannedUserIds.includes(userId) : false
+}
+
+router.post('/api/parties/:id/unban', (req, res) => {
+  const { userId } = req.body as { userId: string }
+  if (!userId) { res.status(400).json({ error: 'userId required' }); return }
+  unbanMember(req.params.id, userId)
   res.json({ ok: true })
 })
 

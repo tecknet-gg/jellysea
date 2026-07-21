@@ -15,6 +15,8 @@ export interface Party {
   id: string
   name: string
   hasPassword: boolean
+  bannedUserIds: string[]
+  bannedUsers: { userId: string; displayName: string }[]
   hostId: string
   hostName: string
   hostAvatar?: string

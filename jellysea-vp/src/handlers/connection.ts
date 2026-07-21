@@ -11,6 +11,7 @@ import {
   unregisterConnection,
   getConnection,
 } from '../store/roomStore'
+import { banMember, isBanned } from './party'
 import { handleSignaling } from './signaling'
 
 export function handleConnection(ws: WebSocket): void {
@@ -118,6 +119,17 @@ export function handleConnection(ws: WebSocket): void {
         return
       }
 
+      const peerConn = getConnection(peerId)
+      if (peerConn?.userInfo?.userId && isBanned(targetRoomId, peerConn.userInfo.userId)) {
+        ws.send(JSON.stringify({
+          type: 'error',
+          roomId: targetRoomId,
+          payload: { message: 'You have been banned from this party' },
+          senderId: 'server',
+        }))
+        return
+      }
+
       addPeerToRoom(targetRoomId, getConnection(peerId)!)
       roomId = targetRoomId
 
@@ -137,6 +149,7 @@ export function handleConnection(ws: WebSocket): void {
       if (!targetId || !roomId) return
       const targetConn = getConnection(targetId)
       if (targetConn) {
+        if (targetConn.userInfo.userId) banMember(roomId, targetConn.userInfo.userId, targetConn.userInfo.displayName)
         const kickMsg = JSON.stringify({ type: 'kicked', roomId, payload: { by: peerId }, senderId: 'server' })
         if (targetConn.ws.readyState === WebSocket.OPEN) targetConn.ws.send(kickMsg)
         targetConn.ws.close()

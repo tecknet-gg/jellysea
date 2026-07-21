@@ -71,10 +71,7 @@ const PartiesPage: NextPage = () => {
 
       {!loading && !error && parties.length === 0 && (
         <div className="mt-16 text-center">
-          <p className="text-lg text-slate-400">No active watch parties</p>
-          <p className="mt-1 text-sm text-slate-500">
-            Create one and invite your friends to watch together!
-          </p>
+          <p className="text-lg text-slate-400">No active parties</p>
         </div>
       )}
 
@@ -83,7 +80,7 @@ const PartiesPage: NextPage = () => {
           {parties.map((party) => (
             <div key={party.id} className="relative group">
               <PartyCard party={party} />
-              {String(user?.id) === party.hostId && (
+              {(hasPermission(Permission.ADMIN) || String(user?.id) === party.hostId) && (
                 <button
                   onClick={() => {
                     if (window.confirm(`End "${party.name}"? Everyone will be disconnected.`))
