@@ -4,8 +4,9 @@ import Header from '@app/components/Common/Header'
 import LoadingSpinner from '@app/components/Common/LoadingSpinner'
 import PartyCard from '@app/components/WatchParty/PartyCard'
 import CreatePartyModal from '@app/components/WatchParty/CreatePartyModal'
-import { fetchParties, createParty } from '@app/utils/partyApi'
+import { fetchParties, createParty, deleteParty } from '@app/utils/partyApi'
 import type { Party } from '@app/utils/partyTypes'
+import { TrashIcon } from '@heroicons/react/24/outline'
 import type { NextPage } from 'next'
 
 const PartiesPage: NextPage = () => {
@@ -43,6 +44,11 @@ const PartiesPage: NextPage = () => {
     await load()
   }
 
+  const handleDelete = useCallback(async (partyId: string) => {
+    await deleteParty(partyId)
+    await load()
+  }, [load])
+
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
@@ -75,7 +81,21 @@ const PartiesPage: NextPage = () => {
       {parties.length > 0 && (
         <div className="flex flex-wrap gap-4">
           {parties.map((party) => (
-            <PartyCard key={party.id} party={party} />
+            <div key={party.id} className="relative group">
+              <PartyCard party={party} />
+              {String(user?.id) === party.hostId && (
+                <button
+                  onClick={() => {
+                    if (window.confirm(`End "${party.name}"? Everyone will be disconnected.`))
+                      handleDelete(party.id)
+                  }}
+                  className="absolute right-2 top-2 z-10 rounded-lg bg-red-500/20 p-1.5 text-red-400 opacity-0 transition hover:bg-red-500/30 group-hover:opacity-100"
+                  title="End party"
+                >
+                  <TrashIcon className="h-4 w-4" />
+                </button>
+              )}
+            </div>
           ))}
         </div>
       )}

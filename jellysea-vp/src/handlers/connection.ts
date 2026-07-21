@@ -132,6 +132,21 @@ export function handleConnection(ws: WebSocket): void {
       return
     }
 
+    if (msg.type === 'kick-member') {
+      const targetId = (msg.payload as { targetId?: string })?.targetId
+      if (!targetId || !roomId) return
+      const targetConn = getConnection(targetId)
+      if (targetConn) {
+        const kickMsg = JSON.stringify({ type: 'kicked', roomId, payload: { by: peerId }, senderId: 'server' })
+        if (targetConn.ws.readyState === WebSocket.OPEN) targetConn.ws.send(kickMsg)
+        targetConn.ws.close()
+      }
+      removePeerFromRoom(roomId, targetId)
+      unregisterConnection(targetId)
+      broadcastPeers(roomId)
+      return
+    }
+
     if (msg.type === 'leave-room') {
       if (roomId) {
         removePeerFromRoom(roomId, peerId)

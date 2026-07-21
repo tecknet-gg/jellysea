@@ -1,10 +1,12 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/router'
 import Link from 'next/link'
-import { TrashIcon } from '@heroicons/react/24/outline'
+import { TrashIcon, UserMinusIcon } from '@heroicons/react/24/outline'
+import useSWR from 'swr'
 import { useUser } from '@app/hooks/useUser'
 import CachedImage from '@app/components/Common/CachedImage'
 import LoadingSpinner from '@app/components/Common/LoadingSpinner'
+import api from '@app/utils/api'
 import { fetchParties, checkPartyPassword, updatePartyMedia, updatePartyStatus, deleteParty } from '@app/utils/partyApi'
 import LibraryBrowserModal from '@app/components/WatchParty/LibraryBrowserModal'
 import SeasonEpisodeSelector from '@app/components/WatchParty/SeasonEpisodeSelector'
@@ -40,7 +42,7 @@ const PartyRoomPage: NextPage = () => {
   const [roomJoined, setRoomJoined] = useState(false)
   const [liveMembers, setLiveMembers] = useState(0)
   const [myPeerId, setMyPeerId] = useState<string | null>(null)
-  const [otherMembers, setOtherMembers] = useState<{ displayName: string; avatar?: string }[]>([])
+  const [otherMembers, setOtherMembers] = useState<{ id: string; displayName: string; avatar?: string }[]>([])
   const [messages, setMessages] = useState<{ id: string; senderName: string; text: string; timestamp: number }[]>([])
   const [chatInput, setChatInput] = useState('')
   const [showMediaSearch, setShowMediaSearch] = useState(false)
@@ -157,7 +159,8 @@ const PartyRoomPage: NextPage = () => {
           setOtherMembers(
             msg.payload.peers.filter((p: { userId?: string }) =>
               p.userId !== party?.hostId
-            ).map((p: { displayName: string; avatar?: string }) => ({
+            ).map((p: { id: string; displayName: string; avatar?: string }) => ({
+              id: p.id,
               displayName: p.displayName,
               avatar: p.avatar,
             }))
@@ -178,6 +181,11 @@ const PartyRoomPage: NextPage = () => {
       }
 
       if (msg.type === 'party-ended') {
+        if (wsRef.current) wsRef.current.close()
+        router.push('/parties')
+      }
+
+      if (msg.type === 'kicked') {
         if (wsRef.current) wsRef.current.close()
         router.push('/parties')
       }
@@ -258,6 +266,32 @@ const PartyRoomPage: NextPage = () => {
       setDeleting(false)
     }
   }, [partyId, router])
+
+  const handleKickMember = useCallback((targetId: string) => {
+    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return
+    wsRef.current.send(JSON.stringify({
+      type: 'kick-member', roomId: partyId, payload: { targetId }, senderId: '',
+    }))
+  }, [partyId])
+
+  const mediaDetailsEndpoint = party?.media
+    ? `/${party.media.mediaType === 'movie' ? 'movie' : 'tv'}/${party.media.tmdbId}`
+    : null
+  const { data: mediaDetails } = useSWR(mediaDetailsEndpoint, (url: string) => api.get(url).then((r) => r.data), { revalidateOnFocus: false, dedupingInterval: 60000 })
+
+  function fmtRuntime(minutes: number): string {
+    if (!minutes || minutes <= 0) return ''
+    const h = Math.floor(minutes / 60)
+    const m = minutes % 60
+    if (h === 0) return `${m}m`
+    if (m === 0) return `${h}h`
+    return `${h}h ${m}m`
+  }
+
+  const rating = mediaDetails?.voteAverage ? (mediaDetails.voteAverage / 10 * 10).toFixed(1) : null
+  const runtime = party?.media?.mediaType === 'movie'
+    ? mediaDetails?.runtime
+    : mediaDetails?.episodeRunTime?.[0]
 
   const connColor = connectionState === 'connected' ? 'bg-green-500'
     : connectionState === 'connecting' ? 'bg-yellow-500' : 'bg-red-500'
@@ -380,6 +414,12 @@ const PartyRoomPage: NextPage = () => {
                   {party.media.overview && (
                     <p className="mt-2 line-clamp-3 text-sm text-slate-300">{party.media.overview}</p>
                   )}
+                  {(rating || runtime) && (
+                    <div className="mt-2 flex flex-wrap gap-3 text-xs text-slate-400">
+                      {rating && <span>TMDB <span className="text-slate-200">{rating}</span>/10</span>}
+                      {runtime && <span>{fmtRuntime(runtime)}</span>}
+                    </div>
+                  )}
                   {party.media.mediaType === 'tv' && (
                     <div className="mt-3">
                       <SeasonEpisodeSelector
@@ -493,16 +533,19 @@ const PartyRoomPage: NextPage = () => {
                         ) : (
                           <div className="h-4 w-4 rounded-full bg-dark-700" />
                         )}
-                        <span className="text-sm text-slate-300">{m.displayName}</span>
+                        <span className="flex-1 text-sm text-slate-300">{m.displayName}</span>
+                        {isHost && (
+                          <button
+                            onClick={() => handleKickMember(m.id)}
+                            className="rounded p-0.5 text-slate-500 hover:bg-red-500/20 hover:text-red-400"
+                            title="Remove member"
+                          >
+                            <UserMinusIcon className="h-3.5 w-3.5" />
+                          </button>
+                        )}
                       </div>
                     ))}
                   </div>
-                </div>
-              )}
-              {party.media && (
-                <div>
-                  <p className="text-xs text-slate-500">Now Watching</p>
-                  <p className="text-sm font-medium text-slate-200">{party.media.title}</p>
                 </div>
               )}
             </div>
