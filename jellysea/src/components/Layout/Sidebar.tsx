@@ -63,6 +63,9 @@ function SidebarContent({ onLinkClick }: { onLinkClick?: () => void }) {
           )
         })}
       </div>
+      <div className="text-center text-[10px] text-slate-600">
+        v0.3.0
+      </div>
       <div className="border-t border-dark-600 px-2 py-3">
         <Menu as="div" className="relative flex justify-center">
           <Menu.Button className="flex rounded-full focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-dark-900">
