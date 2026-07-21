@@ -18,6 +18,7 @@ export type SignalType =
   | 'kicked'
   | 'party-ended'
   | 'media-start'
+  | 'close-player'
   | 'sync-ping'
   | 'offer'
   | 'answer'

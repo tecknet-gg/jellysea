@@ -32,9 +32,11 @@ export default function PartyPlayer({
   const [error, setError] = useState<string | null>(null)
   const [resolving, setResolving] = useState(true)
   const [countdown, setCountdown] = useState(-1)
+  const [pauseCountdown, setPauseCountdown] = useState(-1)
   const [drift, setDrift] = useState<number | null>(null)
   const pingRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const driftRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const wasPlayingRef = useRef(true)
 
   useEffect(() => {
     return () => {
@@ -53,21 +55,15 @@ export default function PartyPlayer({
         if (preloadedStream) {
           setResolved({ type: preloadedStream.type, url: preloadedStream.url, seasonNumber: preloadedStream.seasonNumber, episodeNumber: preloadedStream.episodeNumber })
           setResolving(false)
-        } else {
-          resolveStream()
-        }
-      } else {
-        setCountdown(diff)
-        timeout = setTimeout(update, 200)
-      }
+        } else { resolveStream() }
+      } else { setCountdown(diff); timeout = setTimeout(update, 200) }
     }
     update()
     return () => clearTimeout(timeout)
   }, [startAt])
 
   const resolveStream = async () => {
-    setResolving(true)
-    setError(null)
+    setResolving(true); setError(null)
     try {
       const qs = seasonNumber != null ? `&seasonNumber=${seasonNumber}&episodeNumber=${episodeNumber}` : ''
       const res = await fetch(`/api/v1/media/${tmdbId}/play?mediaType=${mediaType}${qs}`)
@@ -77,9 +73,7 @@ export default function PartyPlayer({
       setResolved(data)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Stream error')
-    } finally {
-      setResolving(false)
-    }
+    } finally { setResolving(false) }
   }
 
   useEffect(() => {
@@ -88,8 +82,7 @@ export default function PartyPlayer({
       const v = document.querySelector('video')
       if (!v || !wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return
       wsRef.current.send(JSON.stringify({
-        type: 'sync-ping',
-        roomId: partyId,
+        type: 'sync-ping', roomId: partyId,
         payload: { currentTime: v.currentTime, isPlaying: !v.paused, timestamp: Date.now() },
         senderId: '',
       }))
@@ -101,13 +94,26 @@ export default function PartyPlayer({
     if (!hostState || isDetached || isHost) return
     const v = document.querySelector('video')
     if (!v) return
-    if (hostState.isPlaying && v.paused) { v.play().catch(() => {}) }
-    if (!hostState.isPlaying && !v.paused) {
-      const latency = (Date.now() - hostState.timestamp) / 1000
-      const hostAdjusted = hostState.currentTime + (hostState.isPlaying ? latency : 0)
-      if (v.currentTime > hostAdjusted) v.pause()
+    if (hostState.isPlaying && v.paused) v.play().catch(() => {})
+    if (!hostState.isPlaying && !v.paused && wasPlayingRef.current) {
+      wasPlayingRef.current = false
+      setPauseCountdown(5)
     }
+    if (hostState.isPlaying) wasPlayingRef.current = true
   }, [hostState, isDetached, isHost])
+
+  useEffect(() => {
+    if (pauseCountdown <= 0) return
+    const t = setTimeout(() => {
+      const next = pauseCountdown - 1
+      if (next <= 0) {
+        setPauseCountdown(-1)
+        const v = document.querySelector('video')
+        if (v && !v.paused) v.pause()
+      } else setPauseCountdown(next)
+    }, 1000)
+    return () => clearTimeout(t)
+  }, [pauseCountdown])
 
   useEffect(() => {
     if (!hostState || isDetached || isHost) { setDrift(null); return }
@@ -116,7 +122,12 @@ export default function PartyPlayer({
       if (!v || !hostState) return
       const latency = (Date.now() - hostState.timestamp) / 1000
       const hostAdjusted = hostState.currentTime + (hostState.isPlaying ? latency : 0)
-      setDrift(Math.round((v.currentTime - hostAdjusted) * 10) / 10)
+      const d = Math.round((v.currentTime - hostAdjusted) * 10) / 10
+      setDrift(d)
+      if (Math.abs(d) > 10 && hostState.isPlaying) {
+        v.currentTime = hostState.currentTime + 0.5
+        setDrift(0)
+      }
     }, 500)
     return () => { if (driftRef.current) clearInterval(driftRef.current) }
   }, [hostState, isDetached, isHost])
@@ -125,12 +136,17 @@ export default function PartyPlayer({
     const v = document.querySelector('video')
     if (!v || !hostState) return
     v.currentTime = hostState.currentTime + 0.5
+    setDrift(0)
   }
 
-  const retryResolve = () => {
-    setError(null)
-    resolveStream()
+  const handleClose = () => {
+    if (!isHost && wsRef.current?.readyState === WebSocket.OPEN && partyId) {
+      wsRef.current.send(JSON.stringify({ type: 'close-player', roomId: partyId, payload: {}, senderId: '' }))
+    }
+    onClose()
   }
+
+  const retryResolve = () => { setError(null); resolveStream() }
 
   if (error) {
     return (
@@ -139,7 +155,7 @@ export default function PartyPlayer({
           <p className="mb-4 text-lg text-red-400">Failed to start playback</p>
           <p className="mb-6 text-sm text-slate-400">{error}</p>
           <button onClick={retryResolve} className="rounded-lg bg-indigo-600 px-4 py-2 text-sm text-white hover:bg-indigo-500">Retry</button>
-          <button onClick={onClose} className="ml-3 rounded-lg bg-white/10 px-4 py-2 text-sm text-white/80 hover:bg-white/20">Cancel</button>
+          <button onClick={handleClose} className="ml-3 rounded-lg bg-white/10 px-4 py-2 text-sm text-white/80 hover:bg-white/20">Cancel</button>
         </div>
       </div>
     )
@@ -163,6 +179,12 @@ export default function PartyPlayer({
         </div>
       )}
 
+      {pauseCountdown > 0 && !isHost && (
+        <div className="fixed right-8 top-20 z-[10001] rounded-xl bg-black/80 px-4 py-2 shadow-lg backdrop-blur">
+          <p className="text-sm text-white">Pausing in <span className="font-bold text-indigo-400">{pauseCountdown}</span></p>
+        </div>
+      )}
+
       {countdown === 0 && resolved?.url && createPortal(
         <>
           <VideoPlayer
@@ -175,14 +197,9 @@ export default function PartyPlayer({
             mediaType={mediaType}
             seasonNumber={seasonNumber ?? resolved.seasonNumber}
             episodeNumber={episodeNumber ?? resolved.episodeNumber}
-            onClose={onClose}
+            onClose={handleClose}
           />
-          <DriftOverlay
-            drift={drift}
-            isDetached={isDetached}
-            onResync={handleResync}
-            onToggleDetach={onToggleDetach}
-          />
+          <DriftOverlay drift={drift} isDetached={isDetached} onResync={handleResync} onToggleDetach={onToggleDetach} />
         </>,
         document.body
       )}

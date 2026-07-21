@@ -60,6 +60,7 @@ const PartyRoomPage: NextPage = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const playerActiveRef = useRef(false)
   const isDetachedRef = useRef(false)
+  const prevMemberCountRef = useRef(0)
   const [preloadedStream, setPreloadedStream] = useState<{ type: 'direct' | 'hls'; url: string; seasonNumber?: number; episodeNumber?: number } | null>(null)
 
   const signalingUrl =
@@ -182,6 +183,15 @@ const PartyRoomPage: NextPage = () => {
 
       if (msg.type === 'room-state') {
         setLiveMembers(msg.payload.peers?.length ?? 0)
+        const count = msg.payload.peers?.length ?? 0
+        if (count > prevMemberCountRef.current) {
+          setMessages((prev) => [...prev, {
+            id: crypto.randomUUID(), senderId: '', senderName: 'System',
+            text: `${count} member${count !== 1 ? 's' : ''} in party`,
+            timestamp: Date.now(), system: true,
+          }])
+        }
+        prevMemberCountRef.current = count
         if (msg.payload.peers) {
           setOtherMembers(
             msg.payload.peers.filter((p: { userId?: string }) =>
@@ -192,6 +202,11 @@ const PartyRoomPage: NextPage = () => {
               avatar: p.avatar,
             }))
           )
+          setMessages((prev) => [...prev, {
+            id: crypto.randomUUID(), senderId: '', senderName: 'System',
+            text: `${msg.payload.peers.length} member${msg.payload.peers.length !== 1 ? 's' : ''} connected`,
+            timestamp: Date.now(), system: true,
+          }])
         }
       }
 
@@ -229,6 +244,10 @@ const PartyRoomPage: NextPage = () => {
 
       if (msg.type === 'sync-ping' && !isDetachedRef.current) {
         setHostSyncState(msg.payload as { currentTime: number; isPlaying: boolean; timestamp: number })
+      }
+
+      if (msg.type === 'close-player') {
+        handleClosePlayer()
       }
     }
 
@@ -273,6 +292,11 @@ const PartyRoomPage: NextPage = () => {
       await updatePartyMedia(partyId, media)
       await updatePartyStatus(partyId, 'ready')
       await refreshParty()
+      setMessages((prev) => [...prev, {
+        id: crypto.randomUUID(), senderId: '', senderName: 'System',
+        text: `Media set to ${media.title}${media.mediaType === 'tv' && media.seasonNumber ? ` (S${media.seasonNumber}E${media.episodeNumber || ''})` : ''}`,
+        timestamp: Date.now(), system: true,
+      }])
     } catch { /* ignore */ }
   }, [partyId, refreshParty])
 
@@ -533,7 +557,9 @@ const PartyRoomPage: NextPage = () => {
                       </button>
                       <button
                         onClick={handleStartWatching}
-                        className="flex items-center gap-1 rounded-lg bg-green-600/80 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-500"
+                        disabled={party.media.mediaType === 'tv' && !party.media.seasonNumber}
+                        className="flex items-center gap-1 rounded-lg bg-green-600/80 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-500 disabled:opacity-40"
+                        title={party.media.mediaType === 'tv' && !party.media.seasonNumber ? 'Select a season and episode first' : 'Start playback for all'}
                       >
                         <PlayIcon className="h-3.5 w-3.5" />
                         Start Watching
