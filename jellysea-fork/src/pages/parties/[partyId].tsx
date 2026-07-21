@@ -58,6 +58,8 @@ const PartyRoomPage: NextPage = () => {
   const wsRef = useRef<WebSocket | null>(null)
   const myPeerIdRef = useRef<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const playerActiveRef = useRef(false)
+  const [preloadedStream, setPreloadedStream] = useState<{ type: 'direct' | 'hls'; url: string; seasonNumber?: number; episodeNumber?: number } | null>(null)
 
   const signalingUrl =
     typeof process !== 'undefined' && process.env.NEXT_PUBLIC_SIGNALING_URL
@@ -101,6 +103,18 @@ const PartyRoomPage: NextPage = () => {
     const timer = setInterval(refreshParty, 5000)
     return () => clearInterval(timer)
   }, [authed, partyId, refreshParty])
+
+  useEffect(() => {
+    if (!authed || !party?.media || playerActive) return
+    setPreloadedStream(null)
+    const qs = party.media.seasonNumber != null ? `&seasonNumber=${party.media.seasonNumber}&episodeNumber=${party.media.episodeNumber}` : ''
+    fetch(`/api/v1/media/${party.media.tmdbId}/play?mediaType=${party.media.mediaType}${qs}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (data?.url) setPreloadedStream({ type: data.type || 'hls', url: data.url, seasonNumber: data.seasonNumber, episodeNumber: data.episodeNumber })
+      })
+      .catch(() => {})
+  }, [authed, party?.media, playerActive])
 
   useEffect(() => {
     if (party?.media?.seasonNumber) setSelectedSeason(party.media.seasonNumber)
@@ -202,7 +216,8 @@ const PartyRoomPage: NextPage = () => {
         router.push('/parties')
       }
 
-      if (msg.type === 'media-start' && !isHost) {
+      if (msg.type === 'media-start') {
+        if (playerActiveRef.current) return
         const p = msg.payload as { startAt: number; tmdbId: number; mediaType: 'movie' | 'tv'; title: string; posterPath?: string; seasonNumber?: number; episodeNumber?: number }
         setPlayerStartAt(p.startAt)
         setPlayerActive(true)
@@ -309,6 +324,7 @@ const PartyRoomPage: NextPage = () => {
     const startAt = Date.now() + 5000
     setPlayerStartAt(startAt)
     setPlayerActive(true)
+    playerActiveRef.current = true
     const m = party.media
     wsRef.current.send(JSON.stringify({
       type: 'media-start',
@@ -320,6 +336,7 @@ const PartyRoomPage: NextPage = () => {
 
   const handleClosePlayer = useCallback(() => {
     setPlayerActive(false)
+    playerActiveRef.current = false
     setPlayerStartAt(null)
     setHostSyncState(null)
     setIsDetached(false)
@@ -649,6 +666,7 @@ const PartyRoomPage: NextPage = () => {
           hostState={hostSyncState}
           isDetached={isDetached}
           onToggleDetach={() => setIsDetached((d) => !d)}
+          preloadedStream={preloadedStream}
         />
       )}
     </div>

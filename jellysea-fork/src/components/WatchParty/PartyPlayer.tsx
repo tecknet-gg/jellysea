@@ -21,11 +21,12 @@ interface PartyPlayerProps {
   hostState: SyncPing | null
   isDetached: boolean
   onToggleDetach: () => void
+  preloadedStream?: { type: 'direct' | 'hls'; url: string; seasonNumber?: number; episodeNumber?: number } | null
 }
 
 export default function PartyPlayer({
   tmdbId, mediaType, title, posterPath, seasonNumber, episodeNumber,
-  isHost, wsRef, startAt, onClose, hostState, isDetached, onToggleDetach,
+  isHost, wsRef, startAt, onClose, hostState, isDetached, onToggleDetach, preloadedStream,
 }: PartyPlayerProps) {
   const [resolved, setResolved] = useState<ResolveResult | null>(null)
   const [resolving, setResolving] = useState(true)
@@ -41,8 +42,15 @@ export default function PartyPlayer({
     let timeout: ReturnType<typeof setTimeout>
     const update = () => {
       const diff = Math.ceil((startAt - Date.now()) / 1000)
-      if (diff <= 0) { setCountdown(0); resolveStream() }
-      else { setCountdown(diff); timeout = setTimeout(update, 200) }
+      if (diff <= 0) {
+        setCountdown(0)
+        if (preloadedStream) {
+          setResolved({ type: preloadedStream.type, url: preloadedStream.url, error: null, seasonNumber: preloadedStream.seasonNumber, episodeNumber: preloadedStream.episodeNumber })
+          setResolving(false)
+        } else {
+          resolveStream()
+        }
+      } else { setCountdown(diff); timeout = setTimeout(update, 200) }
     }
     update()
     return () => clearTimeout(timeout)
