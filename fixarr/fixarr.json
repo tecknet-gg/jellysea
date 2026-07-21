@@ -1,0 +1,24 @@
+{
+    "hosts": [
+        {
+            "type": "radarr",
+            "name": "RADARR",
+            "url": "http://radarr:7878",
+            "apikey": "2d8e97a1125046e8bc48a8dbac9cc4e7"
+        },
+        {
+            "type": "sonarr",
+            "name": "SONARR",
+            "url": "http://sonarr:8989",
+            "apikey": "581e61a6a2d845cb917deacd4c119812"
+        }
+    ],
+    "stalled": [
+        {
+            "hosts": [ "RADARR", "SONARR" ],
+            "enabled": true,
+            "zeroStartTimeout": 15,
+            "stalledTimeout": 7200
+        }
+    ]
+}

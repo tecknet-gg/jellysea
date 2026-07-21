@@ -1,0 +1,99 @@
+# dependencies
+**/node_modules
+
+# next.js
+**/.next/
+**/out/
+
+# production
+**/build
+**/dist
+
+# misc
+.DS_Store
+*.pem
+
+# local env files
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# vercel
+.vercel
+
+# database
+config/db/*.sqlite3*
+config/settings.json
+config/settings.old.json
+
+# logs
+config/logs/*.log*
+config/logs/*.json
+config/logs/*.log.gz
+config/logs/*.json.gz
+
+# VS Code
+.vscode/
+
+# Webstorm
+.idea/
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# sqlite journal
+**/*.sqlite3-journal
+
+# ESLint
+.eslintcache
+
+# TS Build Info
+tsconfig.tsbuildinfo
+
+# Docker compose
+compose.override.yaml
+
+# Config
+config/cache
+
+# Qbittorrent data
+qbittorrent/config/
+qbittorrent/data/
+
+# Sonarr/Radarr/Prowlarr data
+sonarr/config/
+radarr/config/
+prowlarr/config/
+
+# Jellyfin data
+jellyfin/config/
+jellyfin/cache/
+
+# Seerr data
+seerr/config/
+
+# Cloudflared
+cloudflared/config/
+
+# Recyclarr cache
+recyclarr/cache/
+
+# Downloads
+download/
+downloader/
+
+# Pruner data
+pruner/config/
+
+# Fixarr binary
+fixarr/fixarr
+
+# Python
+__pycache__/
+*.pyc
+
+# Test artifacts
+test-results/

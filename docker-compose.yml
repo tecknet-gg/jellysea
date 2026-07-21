@@ -1,0 +1,133 @@
+services:
+  pruner:
+    build: ./pruner
+    container_name: pruner
+    volumes:
+      - ~/Documents/Jellyfin:/media
+    restart: unless-stopped
+
+  fixarr:
+    build: ./fixarr
+    container_name: fixarr
+    restart: unless-stopped
+
+  jellyfin:
+    image: jellyfin/jellyfin:latest
+    container_name: jellyfin
+    ports:
+      - "8096:8096"
+    volumes:
+      - ./jellyfin/config:/config
+      - ./jellyfin/cache:/cache
+      - ~/Documents/Jellyfin:/media
+    environment:
+      - TZ=Europe/London
+    restart: unless-stopped
+
+  jellysea:
+    build: ./jellysea-fork
+    container_name: jellysea
+    volumes:
+      - ./jellysea-fork/config:/app/config
+      - ~/Documents/Jellyfin:/media
+    environment:
+      - TZ=Europe/London
+    restart: unless-stopped
+
+  seerr:
+    image: ghcr.io/seerr-team/seerr:latest
+    container_name: seerr
+    ports:
+      - "127.0.0.1:5055:5055"
+    volumes:
+      - ./seerr/config:/app/config
+    environment:
+      - TZ=Europe/London
+    restart: unless-stopped
+
+  jellysea-ui:
+    build: ./jellysea
+    container_name: jellysea-ui
+    ports:
+      - "8003:8002"
+    environment:
+      - TZ=Europe/London
+      - SEERR_URL=http://jellysea:5055
+      - NEXT_PUBLIC_JELLYFIN_URL=https://watch.teckent.dev
+    restart: unless-stopped
+
+  recyclarr:
+    image: ghcr.io/recyclarr/recyclarr:latest
+    container_name: recyclarr
+    volumes:
+      - ./recyclarr/config:/config
+    environment:
+      - TZ=Europe/London
+      - CRON_SCHEDULE=0 0 * * *  # daily at midnight
+    restart: unless-stopped
+
+  simplemendarr:
+    build: ./simplemendarr
+    container_name: simplemendarr
+    ports:
+      - "8001:8001"
+    env_file: ./simplemendarr/.env
+    restart: unless-stopped
+
+  sonarr:
+    image: lscr.io/linuxserver/sonarr:latest
+    container_name: sonarr
+    ports:
+      - "8989:8989"
+    volumes:
+      - ./sonarr/config:/config
+      - ~/Documents/Jellyfin:/media
+      - ~/Documents/Jellyfin/Downloads:/downloads
+    environment:
+      - TZ=Europe/London
+    restart: unless-stopped
+
+  radarr:
+    image: lscr.io/linuxserver/radarr:latest
+    container_name: radarr
+    ports:
+      - "7878:7878"
+    volumes:
+      - ./radarr/config:/config
+      - ~/Documents/Jellyfin:/media
+      - ~/Documents/Jellyfin/Downloads:/downloads
+    environment:
+      - TZ=Europe/London
+    restart: unless-stopped
+
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr:latest
+    container_name: prowlarr
+    ports:
+      - "9696:9696"
+    volumes:
+      - ./prowlarr/config:/config
+    environment:
+      - TZ=Europe/London
+    restart: unless-stopped
+
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent:latest
+    container_name: qbittorrent
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./qbittorrent/config:/config
+      - ~/Documents/Jellyfin/Downloads:/downloads
+    environment:
+      - TZ=Europe/London
+      - WEBUI_PORT=8080
+    restart: unless-stopped
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared
+    command: tunnel --config /etc/cloudflared/config.yml run
+    volumes:
+      - ./cloudflared/config:/etc/cloudflared
+    restart: unless-stopped

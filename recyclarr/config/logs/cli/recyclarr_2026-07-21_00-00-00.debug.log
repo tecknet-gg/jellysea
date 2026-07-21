@@ -1,0 +1,77 @@
+[00:00:00 DBG] Recyclarr Version: 8.3.2+Branch.master.Sha.fc0c22a607bee044f242f84adf25ca1c284126a5
+[00:00:00 DBG] App Data Dir: /config
+[00:00:00 INF] Initializing provider: official (type: trash-guides)
+[00:00:00 DBG] Using URL: https://github.com/TRaSH-Guides/Guides.git, Refs: ["master","main"]
+[00:00:00 DBG] Executing git command with args: ["status"]
+[00:00:01 DBG] Command Output: On branch master
+nothing to commit, working tree clean
+[00:00:01 DBG] Attempting to fetch reference: master
+[00:00:01 DBG] Executing git command with args: ["fetch","--depth","1","https://github.com/TRaSH-Guides/Guides.git","master"]
+[00:00:05 DBG] Command Output: 
+[00:00:05 DBG] Failed to fetch reference master: fatal: unable to access 'https://github.com/TRaSH-Guides/Guides.git/': Failed to connect to github.com port 443 after 4158 ms: Could not connect to server
+
+[00:00:05 DBG] Attempting to fetch reference: main
+[00:00:05 DBG] Executing git command with args: ["fetch","--depth","1","https://github.com/TRaSH-Guides/Guides.git","main"]
+[00:00:08 DBG] Command Output: 
+[00:00:08 DBG] Failed to fetch reference main: fatal: unable to access 'https://github.com/TRaSH-Guides/Guides.git/': Failed to connect to github.com port 443 after 3047 ms: Could not connect to server
+
+[00:00:08 WRN] All references failed to fetch (will proceed with existing files): ["master","main"]: [ [fatal: unable to access 'https://REDACTED/TRaSH-Guides/Guides.git/': Failed to connect to github.com port 443 after 4158 ms: Could not connect to server] [fatal: unable to access 'https://REDACTED/TRaSH-Guides/Guides.git/': Failed to connect to github.com port 443 after 3047 ms: Could not connect to server] ]
+   at Recyclarr.VersionControl.GitRepository.Fetch(Uri cloneUrl, IReadOnlyList`1 references, CancellationToken token, IReadOnlyList`1 extraArgs) in /source/src/Recyclarr.Core/VersionControl/GitRepository.cs:line 76
+   at Recyclarr.Repo.RepoUpdater.CheckoutAndUpdateRepo(GitRepositorySource repositorySource, CancellationToken token) in /source/src/Recyclarr.Core/Repo/RepoUpdater.cs:line 67[00:00:08 DBG] Executing git command with args: ["reset","--hard","FETCH_HEAD"]
+[00:00:08 DBG] Command Output: 
+[00:00:08 DBG] Non-zero exit code 128 while executing Git command: fatal: ambiguous argument 'FETCH_HEAD': unknown revision or path not in the working tree.
+Use '--' to separate paths from revisions, like this:
+'git <command> [<revision>...] -- [<file>...]'
+   at Recyclarr.VersionControl.GitRepository.RunGitCmd(ICollection`1 args, CancellationToken token) in /source/src/Recyclarr.Core/VersionControl/GitRepository.cs:line 37
+   at Recyclarr.VersionControl.GitRepository.ResetHard(String toBranchOrSha1, CancellationToken token) in /source/src/Recyclarr.Core/VersionControl/GitRepository.cs:line 106
+   at Recyclarr.Repo.RepoUpdater.CheckoutAndUpdateRepo(GitRepositorySource repositorySource, CancellationToken token) in /source/src/Recyclarr.Core/Repo/RepoUpdater.cs:line 78
+   at Recyclarr.Repo.RepoUpdater.UpdateRepo(GitRepositorySource repositorySource, CancellationToken token) in /source/src/Recyclarr.Core/Repo/RepoUpdater.cs:line 21[00:00:08 WRN] Deleting local git repo and retrying git operation due to error
+[00:00:09 DBG] Using URL: https://github.com/TRaSH-Guides/Guides.git, Refs: ["master","main"]
+[00:00:09 DBG] Initializing new repository at /config/resources/trash-guides/git/official
+[00:00:09 DBG] Executing git command with args: ["init"]
+[00:00:09 DBG] Command Output: Initialized empty Git repository in /config/resources/trash-guides/git/official/.git/
+[00:00:09 DBG] Attempting to fetch reference: master
+[00:00:09 DBG] Executing git command with args: ["fetch","--depth","1","https://github.com/TRaSH-Guides/Guides.git","master"]
+[00:00:15 DBG] Command Output: 
+[00:00:15 DBG] Failed to fetch reference master: fatal: unable to access 'https://github.com/TRaSH-Guides/Guides.git/': Failed to connect to github.com port 443 after 5953 ms: Could not connect to server
+
+[00:00:15 DBG] Attempting to fetch reference: main
+[00:00:15 DBG] Executing git command with args: ["fetch","--depth","1","https://github.com/TRaSH-Guides/Guides.git","main"]
+[00:00:21 DBG] Command Output: 
+[00:00:21 DBG] Failed to fetch reference main: fatal: unable to access 'https://github.com/TRaSH-Guides/Guides.git/': Failed to connect to github.com port 443 after 6128 ms: Could not connect to server
+
+[00:00:21 WRN] All references failed to fetch (will proceed with existing files): ["master","main"]: [ [fatal: unable to access 'https://REDACTED/TRaSH-Guides/Guides.git/': Failed to connect to github.com port 443 after 5953 ms: Could not connect to server] [fatal: unable to access 'https://REDACTED/TRaSH-Guides/Guides.git/': Failed to connect to github.com port 443 after 6128 ms: Could not connect to server] ]
+   at Recyclarr.VersionControl.GitRepository.Fetch(Uri cloneUrl, IReadOnlyList`1 references, CancellationToken token, IReadOnlyList`1 extraArgs) in /source/src/Recyclarr.Core/VersionControl/GitRepository.cs:line 76
+   at Recyclarr.Repo.RepoUpdater.CheckoutAndUpdateRepo(GitRepositorySource repositorySource, CancellationToken token) in /source/src/Recyclarr.Core/Repo/RepoUpdater.cs:line 67[00:00:21 DBG] Executing git command with args: ["reset","--hard","FETCH_HEAD"]
+[00:00:21 DBG] Command Output: 
+[00:00:21 ERR] Git provider official failed initialization: fatal: ambiguous argument 'FETCH_HEAD': unknown revision or path not in the working tree.
+Use '--' to separate paths from revisions, like this:
+'git <command> [<revision>...] -- [<file>...]'
+   at Recyclarr.VersionControl.GitRepository.RunGitCmd(ICollection`1 args, CancellationToken token) in /source/src/Recyclarr.Core/VersionControl/GitRepository.cs:line 37
+   at Recyclarr.VersionControl.GitRepository.ResetHard(String toBranchOrSha1, CancellationToken token) in /source/src/Recyclarr.Core/VersionControl/GitRepository.cs:line 106
+   at Recyclarr.Repo.RepoUpdater.CheckoutAndUpdateRepo(GitRepositorySource repositorySource, CancellationToken token) in /source/src/Recyclarr.Core/Repo/RepoUpdater.cs:line 78
+   at Recyclarr.Repo.RepoUpdater.UpdateRepo(GitRepositorySource repositorySource, CancellationToken token) in /source/src/Recyclarr.Core/Repo/RepoUpdater.cs:line 37
+   at Recyclarr.ResourceProviders.Storage.GitProviderLocation.InitializeAsync(IProgress`1 progress, CancellationToken ct) in /source/src/Recyclarr.Core/ResourceProviders/Storage/GitProviderLocation.cs:line 40[00:00:21 ERR] Exiting due to fatal error: Could not find color or style '<revision>...'.
+   at Spectre.Console.StyleParser.Parse(String text) in /_/src/Spectre.Console/StyleParser.cs:line 10
+   at Spectre.Console.MarkupParser.Parse(String text, Style style) in /_/src/Spectre.Console/Internal/Text/Markup/MarkupParser.cs:line 29
+   at Spectre.Console.AnsiConsoleExtensions.Markup(IAnsiConsole console, String value) in /_/src/Spectre.Console/Extensions/AnsiConsoleExtensions.Markup.cs:line 77
+   at Spectre.Console.AnsiConsoleExtensions.MarkupLine(IAnsiConsole console, String value) in /_/src/Spectre.Console/Extensions/AnsiConsoleExtensions.Markup.cs:line 117
+   at Recyclarr.Cli.Console.Helpers.ProviderProgressHandler.ProgressReporter.Report(ProviderProgress value) in /source/src/Recyclarr.Cli/Console/Helpers/ProviderProgressHandler.cs:line 54
+   at Recyclarr.ResourceProviders.Storage.GitProviderLocation.InitializeAsync(IProgress`1 progress, CancellationToken ct) in /source/src/Recyclarr.Core/ResourceProviders/Storage/GitProviderLocation.cs:line 57
+   at Recyclarr.ResourceProviders.Infrastructure.ProviderInitializationFactory.InitializeProvidersAsync(IProgress`1 progress, CancellationToken ct) in /source/src/Recyclarr.Core/ResourceProviders/Infrastructure/ProviderInitializationFactory.cs:line 48
+   at Recyclarr.Cli.Console.Helpers.ProviderProgressHandler.<>c__DisplayClass3_0.<<InitializeProvidersAsync>b__1>d.MoveNext() in /source/src/Recyclarr.Cli/Console/Helpers/ProviderProgressHandler.cs:line 30
+--- End of stack trace from previous location ---
+   at Spectre.Console.Progress.<>c__DisplayClass31_0.<<StartAsync>b__0>d.MoveNext() in /_/src/Spectre.Console/Live/Progress/Progress.cs:line 103
+--- End of stack trace from previous location ---
+   at Spectre.Console.Progress.<>c__DisplayClass32_0`1.<<StartAsync>b__0>d.MoveNext() in /_/src/Spectre.Console/Live/Progress/Progress.cs:line 138
+--- End of stack trace from previous location ---
+   at Spectre.Console.Internal.DefaultExclusivityMode.RunAsync[T](Func`1 func) in /_/src/Spectre.Console/Internal/DefaultExclusivityMode.cs:line 40
+   at Spectre.Console.Progress.StartAsync[T](Func`2 action) in /_/src/Spectre.Console/Live/Progress/Progress.cs:line 121
+   at Spectre.Console.Progress.StartAsync(Func`2 action) in /_/src/Spectre.Console/Live/Progress/Progress.cs:line 101
+   at Recyclarr.Cli.Console.Helpers.ProviderProgressHandler.InitializeProvidersAsync(Boolean silent, CancellationToken ct) in /source/src/Recyclarr.Cli/Console/Helpers/ProviderProgressHandler.cs:line 18
+   at Recyclarr.Cli.Console.Commands.SyncCommand.ExecuteAsync(CommandContext context, CliSettings settings, CancellationToken ct) in /source/src/Recyclarr.Cli/Console/Commands/SyncCommand.cs:line 61
+   at Spectre.Console.Cli.CommandExecutor.ExecuteAsync(CommandTree leaf, CommandTree tree, CommandContext context, ITypeResolver resolver, IConfiguration configuration, CancellationToken cancellationToken) in /_/src/Spectre.Console.Cli/Internal/CommandExecutor.cs:line 260
+   at Spectre.Console.Cli.CommandExecutor.ExecuteAsync(IConfiguration configuration, IEnumerable`1 args, CancellationToken cancellationToken) in /_/src/Spectre.Console.Cli/Internal/CommandExecutor.cs:line 128
+   at Spectre.Console.Cli.CommandApp.RunAsync(IEnumerable`1 args, CancellationToken cancellationToken) in /_/src/Spectre.Console.Cli/CommandApp.cs:line 77
+   at Recyclarr.Cli.Console.CliSetup.Run(ILifetimeScope scope, IEnumerable`1 args) in /source/src/Recyclarr.Cli/Console/CliSetup.cs:line 98
+   at Recyclarr.Cli.Program.Main(String[] args) in /source/src/Recyclarr.Cli/Program.cs:line 27

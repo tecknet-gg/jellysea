@@ -1,0 +1,65 @@
+[15:53:39 DBG] Recyclarr Version: 8.3.2+Branch.master.Sha.fc0c22a607bee044f242f84adf25ca1c284126a5
+[15:53:39 DBG] App Data Dir: /config
+[15:53:39 INF] Initializing provider: official (type: trash-guides)
+[15:53:39 DBG] Using URL: https://github.com/TRaSH-Guides/Guides.git, Refs: ["master","main"]
+[15:53:39 DBG] Executing git command with args: ["status"]
+[15:53:40 DBG] Command Output: On branch master
+nothing to commit, working tree clean
+[15:53:40 DBG] Attempting to fetch reference: master
+[15:53:40 DBG] Executing git command with args: ["fetch","--depth","1","https://github.com/TRaSH-Guides/Guides.git","master"]
+[15:53:40 DBG] Command Output: 
+[15:53:40 DBG] Successfully fetched reference: master
+[15:53:40 DBG] Executing git command with args: ["reset","--hard","FETCH_HEAD"]
+[15:53:40 DBG] Command Output: HEAD is now at 6555b2a fix(radarr): Validate Remux source and modifier semantics in CI (#2829)
+[15:53:40 DBG] MapResourcePaths called for provider official at /config/resources/trash-guides/git/official
+[15:53:40 DBG] Provider official: GlobJsonFiles received 1 paths
+[15:53:40 DBG] Provider official: Checking docs/json/radarr/cf (Exists: True)
+[15:53:40 DBG] Provider official: Found 240 files in docs/json/radarr/cf
+[15:53:40 DBG] Provider official: GlobJsonFiles received 1 paths
+[15:53:40 DBG] Provider official: Checking docs/json/radarr/quality-size (Exists: True)
+[15:53:40 DBG] Provider official: Found 4 files in docs/json/radarr/quality-size
+[15:53:40 DBG] Provider official: GlobJsonFiles received 1 paths
+[15:53:40 DBG] Provider official: Checking docs/json/radarr/naming (Exists: True)
+[15:53:40 DBG] Provider official: Found 1 files in docs/json/radarr/naming
+[15:53:40 DBG] Provider official: GlobJsonFiles received 1 paths
+[15:53:40 DBG] Provider official: Checking docs/json/sonarr/cf (Exists: True)
+[15:53:40 DBG] Provider official: Found 235 files in docs/json/sonarr/cf
+[15:53:40 DBG] Provider official: GlobJsonFiles received 1 paths
+[15:53:40 DBG] Provider official: Checking docs/json/sonarr/quality-size (Exists: True)
+[15:53:40 DBG] Provider official: Found 2 files in docs/json/sonarr/quality-size
+[15:53:40 DBG] Provider official: GlobJsonFiles received 1 paths
+[15:53:40 DBG] Provider official: Checking docs/json/sonarr/naming (Exists: True)
+[15:53:40 DBG] Provider official: Found 1 files in docs/json/sonarr/naming
+[15:53:40 DBG] Provider official: GlobJsonFiles received 1 paths
+[15:53:40 DBG] Provider official: Checking docs/json/radarr/cf-groups (Exists: True)
+[15:53:40 DBG] Provider official: Found 40 files in docs/json/radarr/cf-groups
+[15:53:40 DBG] Provider official: GlobJsonFiles received 1 paths
+[15:53:40 DBG] Provider official: Checking docs/json/sonarr/cf-groups (Exists: True)
+[15:53:40 DBG] Provider official: Found 38 files in docs/json/sonarr/cf-groups
+[15:53:40 DBG] Provider official: GlobJsonFiles received 1 paths
+[15:53:40 DBG] Provider official: Checking docs/json/radarr/quality-profiles (Exists: True)
+[15:53:40 DBG] Provider official: Found 36 files in docs/json/radarr/quality-profiles
+[15:53:40 DBG] Provider official: GlobJsonFiles received 1 paths
+[15:53:40 DBG] Provider official: Checking docs/json/sonarr/quality-profiles (Exists: True)
+[15:53:40 DBG] Provider official: Found 23 files in docs/json/sonarr/quality-profiles
+[15:53:40 INF] Initializing provider: official (type: config-templates)
+[15:53:40 DBG] Using URL: https://github.com/recyclarr/config-templates.git, Refs: ["v8","master","main"]
+[15:53:40 DBG] Executing git command with args: ["status"]
+[15:53:40 DBG] Command Output: On branch master
+nothing to commit, working tree clean
+[15:53:40 DBG] Attempting to fetch reference: v8
+[15:53:40 DBG] Executing git command with args: ["fetch","--depth","1","https://github.com/recyclarr/config-templates.git","v8"]
+[15:53:41 DBG] Command Output: 
+[15:53:41 DBG] Successfully fetched reference: v8
+[15:53:41 DBG] Executing git command with args: ["reset","--hard","FETCH_HEAD"]
+[15:53:41 DBG] Command Output: HEAD is now at bb642fe chore: remove repo-local mise.toml
+[15:53:41 DBG] Creating config from templates: ["web-1080p","uhd-bluray-web"]
+[15:53:41 DBG] ConfigTemplates: Querying Radarr config templates
+[15:53:41 DBG] ConfigTemplates: Found 35 Radarr templates in registry
+[15:53:41 DBG] ConfigTemplates: Retrieved 35 unique Radarr templates
+[15:53:41 DBG] ConfigTemplates: Querying Sonarr config templates
+[15:53:41 DBG] ConfigTemplates: Found 18 Sonarr templates in registry
+[15:53:41 DBG] ConfigTemplates: Retrieved 18 unique Sonarr templates
+[15:53:41 INF] Created configuration file: /config/configs/uhd-bluray-web.yml
+[15:53:41 INF] Created configuration file: /config/configs/web-1080p.yml
+[15:53:41 DBG] Cleaning up logs using max files of 20
