@@ -1,6 +1,6 @@
 {
   "name": "jellysea-vp",
-  "version": "0.3.20",
+  "version": "0.3.21",
   "private": true,
   "scripts": {
     "dev": "tsx watch src/index.ts",

@@ -27,6 +27,10 @@ interface PartyPlayerProps {
   onSendChat: (text: string) => void
 }
 
+function getVideo(): HTMLVideoElement | null {
+  return document.querySelector('video')
+}
+
 export default function PartyPlayer({
   tmdbId, mediaType, title, posterPath, seasonNumber, episodeNumber,
   partyId, isHost, wsRef, startAt, onClose, hostState, isDetached, onToggleDetach, preloadedStream,
@@ -40,14 +44,18 @@ export default function PartyPlayer({
   const [drift, setDrift] = useState<number | null>(null)
   const [showChat, setShowChat] = useState(false)
   const [chatInput, setChatInput] = useState('')
+  const [playerReady, setPlayerReady] = useState(false)
   const pingRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  const driftRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const driftTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const hostStateRef = useRef<SyncPing | null>(null)
   const wasPlayingRef = useRef(true)
+
+  useEffect(() => { hostStateRef.current = hostState }, [hostState])
 
   useEffect(() => {
     return () => {
       if (pingRef.current) clearInterval(pingRef.current)
-      if (driftRef.current) clearInterval(driftRef.current)
+      if (driftTimerRef.current) clearInterval(driftTimerRef.current)
     }
   }, [])
 
@@ -55,28 +63,28 @@ export default function PartyPlayer({
     if (!startAt) return
     const diff = Math.ceil((startAt - Date.now()) / 1000)
     if (diff <= 0) {
-      setCountdown(0)
-      if (preloadedStream) {
-        setResolved({ type: preloadedStream.type as 'direct' | 'hls', url: preloadedStream.url, seasonNumber: preloadedStream.seasonNumber, episodeNumber: preloadedStream.episodeNumber })
-        setResolving(false)
-      } else { resolveStream() }
+      startPlayback()
       return
     }
     setCountdown(diff)
     let timeout: ReturnType<typeof setTimeout>
     const update = () => {
       const d = Math.ceil((startAt - Date.now()) / 1000)
-      if (d <= 0) {
-        setCountdown(0)
-        if (preloadedStream) {
-          setResolved({ type: preloadedStream.type as 'direct' | 'hls', url: preloadedStream.url, seasonNumber: preloadedStream.seasonNumber, episodeNumber: preloadedStream.episodeNumber })
-          setResolving(false)
-        } else { resolveStream() }
-      } else { setCountdown(d); timeout = setTimeout(update, 200) }
+      if (d <= 0) { startPlayback() }
+      else { setCountdown(d); timeout = setTimeout(update, 200) }
     }
     timeout = setTimeout(update, 200)
     return () => clearTimeout(timeout)
   }, [startAt])
+
+  const startPlayback = () => {
+    setCountdown(0)
+    if (preloadedStream) {
+      setResolved({ type: preloadedStream.type as 'direct' | 'hls', url: preloadedStream.url, seasonNumber: preloadedStream.seasonNumber, episodeNumber: preloadedStream.episodeNumber })
+      setResolving(false)
+      setPlayerReady(true)
+    } else { resolveStream() }
+  }
 
   const resolveStream = async () => {
     setResolving(true); setError(null)
@@ -87,6 +95,7 @@ export default function PartyPlayer({
       const data = await res.json()
       if (!data?.url) throw new Error('No stream URL')
       setResolved(data)
+      setPlayerReady(true)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Stream error')
     } finally { setResolving(false) }
@@ -95,7 +104,7 @@ export default function PartyPlayer({
   useEffect(() => {
     if (!resolved?.url || !isHost || !wsRef.current || !partyId) return
     pingRef.current = setInterval(() => {
-      const v = document.querySelector('video')
+      const v = getVideo()
       if (!v || !wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return
       wsRef.current.send(JSON.stringify({
         type: 'sync-ping', roomId: partyId,
@@ -107,15 +116,16 @@ export default function PartyPlayer({
   }, [resolved?.url, isHost, wsRef, partyId])
 
   useEffect(() => {
-    if (!hostState || isDetached || isHost) return
-    const v = document.querySelector('video')
+    const hs = hostStateRef.current
+    if (!hs || isDetached || isHost) return
+    const v = getVideo()
     if (!v) return
-    if (hostState.isPlaying && v.paused) v.play().catch(() => {})
-    if (!hostState.isPlaying && !v.paused && wasPlayingRef.current) {
+    if (hs.isPlaying && v.paused) { v.play().catch(() => {}); wasPlayingRef.current = true }
+    if (!hs.isPlaying && !v.paused && wasPlayingRef.current) {
       wasPlayingRef.current = false
       setPauseCountdown(5)
     }
-    if (hostState.isPlaying) wasPlayingRef.current = true
+    if (hs.isPlaying) wasPlayingRef.current = true
   }, [hostState, isDetached, isHost])
 
   useEffect(() => {
@@ -124,37 +134,46 @@ export default function PartyPlayer({
       const next = pauseCountdown - 1
       if (next <= 0) {
         setPauseCountdown(-1)
-        const v = document.querySelector('video')
+        const v = getVideo()
+        const hs = hostStateRef.current
         if (v && !v.paused) {
-          if (hostState) v.currentTime = hostState.currentTime
+          if (hs) v.currentTime = hs.currentTime
           v.pause()
         }
       } else setPauseCountdown(next)
     }, 1000)
     return () => clearTimeout(t)
-  }, [pauseCountdown, hostState])
+  }, [pauseCountdown])
 
   useEffect(() => {
-    setDrift(null)
-    if (driftRef.current) clearInterval(driftRef.current)
-    if (isDetached || isHost || !hostState) return
+    if (!playerReady || isHost) return
+    if (driftTimerRef.current) clearInterval(driftTimerRef.current)
 
-    driftRef.current = setInterval(() => {
-      const v = document.querySelector('video')
-      if (!v || !hostState) return
-      const latency = (Date.now() - hostState.timestamp) / 1000
-      const hostAdjusted = hostState.currentTime + (hostState.isPlaying ? latency : 0)
-      setDrift(Math.round((v.currentTime - hostAdjusted) * 10) / 10)
+    driftTimerRef.current = setInterval(() => {
+      const v = getVideo()
+      const hs = hostStateRef.current
+      if (!v || !hs) { setDrift(null); return }
+      if (isDetached) { setDrift(null); return }
+      const latency = (Date.now() - hs.timestamp) / 1000
+      const hostAdjusted = hs.currentTime + (hs.isPlaying ? latency : 0)
+      const d = Math.round((v.currentTime - hostAdjusted) * 10) / 10
+      setDrift(d)
+      if (Math.abs(d) > 10 && hs.isPlaying) {
+        v.currentTime = hs.currentTime + 0.5
+        setDrift(0)
+      }
     }, 500)
-    return () => { if (driftRef.current) clearInterval(driftRef.current) }
-  }, [hostState, isDetached, isHost])
+
+    return () => { if (driftTimerRef.current) clearInterval(driftTimerRef.current) }
+  }, [playerReady, isHost])
 
   const handleResync = useCallback(() => {
-    const v = document.querySelector('video')
-    if (!v || !hostState) return
-    v.currentTime = hostState.currentTime + 0.5
+    const v = getVideo()
+    const hs = hostStateRef.current
+    if (!v || !hs) return
+    v.currentTime = hs.currentTime + 0.5
     setDrift(0)
-  }, [hostState])
+  }, [])
 
   const handleClose = useCallback(() => {
     if (wsRef.current?.readyState === WebSocket.OPEN && partyId) {
