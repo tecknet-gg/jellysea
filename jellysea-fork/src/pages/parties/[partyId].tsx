@@ -21,6 +21,8 @@ const PartyRoomPage: NextPage = () => {
   const [connectionState, setConnectionState] = useState('disconnected')
   const [messages, setMessages] = useState<{ id: string; senderName: string; text: string; timestamp: number }[]>([])
   const [chatInput, setChatInput] = useState('')
+  const [roomJoined, setRoomJoined] = useState(false)
+  const [liveMembers, setLiveMembers] = useState(0)
 
   const wsRef = useRef<WebSocket | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -57,17 +59,18 @@ const PartyRoomPage: NextPage = () => {
   }, [password, partyId])
 
   useEffect(() => {
-    if (!authed || !partyId) return
+    if (!authed || !partyId || typeof partyId !== 'string') return
 
     const ws = new WebSocket(signalingUrl)
     wsRef.current = ws
     setConnectionState('connecting')
+    let joined = false
 
     ws.onopen = () => {
       setConnectionState('connected')
       ws.send(JSON.stringify({
         type: 'set-user-info',
-        roomId: partyId,
+        roomId: '',
         payload: { displayName: user?.displayName || user?.username || 'Anonymous', avatar: user?.avatar },
         senderId: '',
       }))
@@ -75,6 +78,34 @@ const PartyRoomPage: NextPage = () => {
 
     ws.onmessage = (event) => {
       const msg = JSON.parse(event.data)
+
+      if (msg.type === 'peer-id') {
+        ws.send(JSON.stringify({
+          type: 'join-room',
+          roomId: partyId,
+          payload: { roomId: partyId },
+          senderId: '',
+        }))
+      }
+
+      if (msg.type === 'room-joined' || msg.type === 'room-created') {
+        joined = true
+        setRoomJoined(true)
+      }
+
+      if (msg.type === 'error' && (msg.payload as { message: string })?.message === 'Room not found') {
+        ws.send(JSON.stringify({
+          type: 'create-room',
+          roomId: '',
+          payload: { roomId: partyId },
+          senderId: '',
+        }))
+      }
+
+      if (msg.type === 'room-state') {
+        setLiveMembers(msg.payload.peers?.length ?? 0)
+      }
+
       if (msg.type === 'chat') {
         setMessages((prev) => [
           ...prev,
@@ -89,10 +120,26 @@ const PartyRoomPage: NextPage = () => {
       }
     }
 
-    ws.onclose = () => setConnectionState('disconnected')
-    ws.onerror = () => setConnectionState('disconnected')
+    ws.onclose = () => {
+      setConnectionState('disconnected')
+      if (joined) setRoomJoined(false)
+    }
 
-    return () => { ws.close() }
+    ws.onerror = () => {
+      setConnectionState('disconnected')
+    }
+
+    return () => {
+      if (wsRef.current && partyId && joined) {
+        wsRef.current.send(JSON.stringify({
+          type: 'leave-room',
+          roomId: partyId,
+          payload: {},
+          senderId: '',
+        }))
+      }
+      ws.close()
+    }
   }, [authed, partyId, signalingUrl, user])
 
   useEffect(() => {
@@ -101,7 +148,7 @@ const PartyRoomPage: NextPage = () => {
 
   const handleChat = useCallback((e: React.FormEvent) => {
     e.preventDefault()
-    if (!chatInput.trim() || !wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return
+    if (!chatInput.trim() || !wsRef.current || wsRef.current.readyState !== WebSocket.OPEN || !roomJoined) return
 
     const name = user?.displayName || user?.username || 'Anonymous'
     setMessages((prev) => [...prev, {
@@ -181,9 +228,15 @@ const PartyRoomPage: NextPage = () => {
           <div className={`h-2 w-2 rounded-full ${connColor}`} />
           <span className="text-xs text-slate-400 capitalize">{connectionState}</span>
         </div>
-        <span className="rounded-full bg-dark-800 px-2.5 py-1 text-xs text-slate-400">
-          {party.memberCount} member{party.memberCount !== 1 ? 's' : ''}
-        </span>
+          {liveMembers > 0 ? (
+            <span className="rounded-full bg-dark-800 px-2.5 py-1 text-xs text-slate-400">
+              {liveMembers} {liveMembers === 1 ? 'member' : 'members'}
+            </span>
+          ) : party && (
+            <span className="rounded-full bg-dark-800 px-2.5 py-1 text-xs text-slate-400">
+              {party.memberCount} {party.memberCount === 1 ? 'member' : 'members'}
+            </span>
+          )}
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
@@ -220,7 +273,7 @@ const PartyRoomPage: NextPage = () => {
                 />
                 <button
                   type="submit"
-                  disabled={!chatInput.trim()}
+                  disabled={!chatInput.trim() || !roomJoined}
                   className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-50"
                 >
                   Send

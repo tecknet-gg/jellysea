@@ -73,9 +73,15 @@ export function handleConnection(ws: WebSocket): void {
         ? (msg.payload as { roomId: string }).roomId
         : uuid().slice(0, 8)
 
-      createRoom(newRoomId)
-      addPeerToRoom(newRoomId, getConnection(peerId)!)
-      roomId = newRoomId
+      const existing = getRoom(newRoomId)
+      if (existing) {
+        addPeerToRoom(newRoomId, getConnection(peerId)!)
+        roomId = newRoomId
+      } else {
+        createRoom(newRoomId)
+        addPeerToRoom(newRoomId, getConnection(peerId)!)
+        roomId = newRoomId
+      }
 
       ws.send(JSON.stringify({
         type: 'room-created',
