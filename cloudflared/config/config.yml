@@ -6,7 +6,7 @@ ingress:
     path: ^/vp/?$
     service: http://jellysea-vp:8004
   - hostname: test.tecknet.dev
-    service: http://jellysea-ui:8002
+    service: http://jellysea:5055
   - hostname: watch.tecknet.dev
     service: http://jellyfin:8096
   - service: http_status:404

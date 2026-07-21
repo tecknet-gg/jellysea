@@ -32,6 +32,7 @@ services:
       - ~/Documents/Jellyfin:/media
     environment:
       - TZ=Europe/London
+      - NEXT_PUBLIC_SIGNALING_URL=wss://test.tecknet.dev/vp
     restart: unless-stopped
 
   seerr:
