@@ -6,7 +6,7 @@ import { useUser } from '@app/hooks/useUser'
 import CachedImage from '@app/components/Common/CachedImage'
 import LoadingSpinner from '@app/components/Common/LoadingSpinner'
 import { fetchParties, checkPartyPassword, updatePartyMedia, updatePartyStatus, deleteParty } from '@app/utils/partyApi'
-import MediaSearchModal from '@app/components/WatchParty/MediaSearchModal'
+import LibraryBrowserModal from '@app/components/WatchParty/LibraryBrowserModal'
 import type { Party, PartyMedia } from '@app/utils/partyTypes'
 import type { NextPage } from 'next'
 
@@ -428,7 +428,7 @@ const PartyRoomPage: NextPage = () => {
         </div>
       </div>
 
-      <MediaSearchModal open={showMediaSearch} onClose={() => setShowMediaSearch(false)} onSelect={handleSelectMedia} />
+      <LibraryBrowserModal open={showMediaSearch} onClose={() => setShowMediaSearch(false)} onSelect={handleSelectMedia} />
     </div>
   )
 }
