@@ -48,7 +48,7 @@ const PartyRoomPage: NextPage = () => {
   const [playerStartAt, setPlayerStartAt] = useState<number | null>(null)
   const [hostSyncState, setHostSyncState] = useState<{ currentTime: number; isPlaying: boolean; timestamp: number } | null>(null)
   const [isDetached, setIsDetached] = useState(false)
-  const [messages, setMessages] = useState<{ id: string; senderName: string; text: string; timestamp: number }[]>([])
+  const [messages, setMessages] = useState<{ id: string; senderName: string; text: string; timestamp: number; system?: boolean }[]>([])
   const [chatInput, setChatInput] = useState('')
   const [showMediaSearch, setShowMediaSearch] = useState(false)
   const [deleting, setDeleting] = useState(false)
@@ -59,6 +59,7 @@ const PartyRoomPage: NextPage = () => {
   const myPeerIdRef = useRef<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const playerActiveRef = useRef(false)
+  const isDetachedRef = useRef(false)
   const [preloadedStream, setPreloadedStream] = useState<{ type: 'direct' | 'hls'; url: string; seasonNumber?: number; episodeNumber?: number } | null>(null)
 
   const signalingUrl =
@@ -221,9 +222,12 @@ const PartyRoomPage: NextPage = () => {
         const p = msg.payload as { startAt: number; tmdbId: number; mediaType: 'movie' | 'tv'; title: string; posterPath?: string; seasonNumber?: number; episodeNumber?: number }
         setPlayerStartAt(p.startAt)
         setPlayerActive(true)
+        setMessages((prev) => [...prev, {
+          id: crypto.randomUUID(), senderId: '', senderName: 'System', text: 'Playback started!', timestamp: Date.now(), system: true,
+        }])
       }
 
-      if (msg.type === 'sync-ping' && !isHost && !isDetached) {
+      if (msg.type === 'sync-ping' && !isDetachedRef.current) {
         setHostSyncState(msg.payload as { currentTime: number; isPlaying: boolean; timestamp: number })
       }
     }
@@ -339,7 +343,7 @@ const PartyRoomPage: NextPage = () => {
     playerActiveRef.current = false
     setPlayerStartAt(null)
     setHostSyncState(null)
-    setIsDetached(false)
+    setIsDetached(false); isDetachedRef.current = false
   }, [])
 
   const mediaDetailsEndpoint = party?.media
@@ -553,11 +557,17 @@ const PartyRoomPage: NextPage = () => {
               )}
               {messages.map((m) => (
                 <div key={m.id} className="mb-3">
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-sm font-semibold text-indigo-400">{m.senderName}</span>
-                    <span className="text-xs text-slate-500">{new Date(m.timestamp).toLocaleTimeString()}</span>
-                  </div>
-                  <p className="text-sm text-slate-300">{m.text}</p>
+                  {m.system ? (
+                    <p className="text-center text-xs text-slate-500 italic">{m.text}</p>
+                  ) : (
+                    <>
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-sm font-semibold text-indigo-400">{m.senderName}</span>
+                        <span className="text-xs text-slate-500">{new Date(m.timestamp).toLocaleTimeString()}</span>
+                      </div>
+                      <p className="text-sm text-slate-300">{m.text}</p>
+                    </>
+                  )}
                 </div>
               ))}
               <div ref={messagesEndRef} />
@@ -665,7 +675,7 @@ const PartyRoomPage: NextPage = () => {
           onClose={handleClosePlayer}
           hostState={hostSyncState}
           isDetached={isDetached}
-          onToggleDetach={() => setIsDetached((d) => !d)}
+          onToggleDetach={() => { const next = !isDetached; setIsDetached(next); isDetachedRef.current = next }}
           preloadedStream={preloadedStream}
         />
       )}

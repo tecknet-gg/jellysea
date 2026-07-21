@@ -25,7 +25,7 @@ export function handleSignaling(ws: WebSocket, msg: SignalMessage): void {
     for (const peer of peers) {
       if (peer.peerId !== msg.senderId && peer.ws.readyState === WebSocket.OPEN) {
         peer.ws.send(JSON.stringify({
-          type: 'chat',
+          type,
           roomId,
           payload: msg.payload,
           senderId: msg.senderId,
