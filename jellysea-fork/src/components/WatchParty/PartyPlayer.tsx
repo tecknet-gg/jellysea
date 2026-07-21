@@ -48,18 +48,28 @@ export default function PartyPlayer({
 
   useEffect(() => {
     if (!startAt) return
+    const diff = Math.ceil((startAt - Date.now()) / 1000)
+    if (diff <= 0) {
+      setCountdown(0)
+      if (preloadedStream) {
+        setResolved({ type: preloadedStream.type as 'direct' | 'hls', url: preloadedStream.url, seasonNumber: preloadedStream.seasonNumber, episodeNumber: preloadedStream.episodeNumber })
+        setResolving(false)
+      } else { resolveStream() }
+      return
+    }
+    setCountdown(diff)
     let timeout: ReturnType<typeof setTimeout>
     const update = () => {
-      const diff = Math.ceil((startAt - Date.now()) / 1000)
-      if (diff <= 0) {
+      const d = Math.ceil((startAt - Date.now()) / 1000)
+      if (d <= 0) {
         setCountdown(0)
         if (preloadedStream) {
           setResolved({ type: preloadedStream.type as 'direct' | 'hls', url: preloadedStream.url, seasonNumber: preloadedStream.seasonNumber, episodeNumber: preloadedStream.episodeNumber })
           setResolving(false)
         } else { resolveStream() }
-      } else { setCountdown(diff); timeout = setTimeout(update, 200) }
+      } else { setCountdown(d); timeout = setTimeout(update, 200) }
     }
-    update()
+    timeout = setTimeout(update, 200)
     return () => clearTimeout(timeout)
   }, [startAt])
 
@@ -119,7 +129,7 @@ export default function PartyPlayer({
   useEffect(() => {
     setDrift(null)
     if (driftRef.current) clearInterval(driftRef.current)
-    if (isDetached || isHost || !hostState || !hostState.isPlaying) return
+    if (isDetached || isHost || !hostState) return
 
     driftRef.current = setInterval(() => {
       const v = videoRef.current

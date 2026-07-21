@@ -372,6 +372,7 @@ const PartyRoomPage: NextPage = () => {
       payload: { startAt, tmdbId: m.tmdbId, mediaType: m.mediaType, title: m.title, posterPath: m.posterPath, seasonNumber: m.seasonNumber, episodeNumber: m.episodeNumber },
       senderId: '',
     }))
+    updatePartyStatus(partyId as string, 'watching').catch(() => {})
   }, [partyId, party?.media, wsRef])
 
   const handleClosePlayer = useCallback(() => {
@@ -383,7 +384,8 @@ const PartyRoomPage: NextPage = () => {
     setHostSyncState(null)
     setIsDetached(false)
     isDetachedRef.current = false
-  }, [])
+    if (partyId) updatePartyStatus(partyId as string, 'ready').catch(() => {})
+  }, [partyId])
 
   const handleJoinPlayback = useCallback(() => {
     if (!party?.media) return
@@ -587,7 +589,7 @@ const PartyRoomPage: NextPage = () => {
                       </button>
                     </div>
                   )}
-                  {!isHost && playbackActive && !playerActive && (
+                  {!isHost && party.status === 'watching' && !playerActive && (
                     <div className="mt-3">
                       <button
                         onClick={handleJoinPlayback}
