@@ -1,0 +1,12 @@
+tunnel: 89b40576-05ba-4c65-b735-5faca63c7a27
+credentials-file: /etc/cloudflared/89b40576-05ba-4c65-b735-5faca63c7a27.json
+
+ingress:
+  - hostname: test.tecknet.dev
+    path: ^/vp/?$
+    service: http://jellysea-vp:8004
+  - hostname: test.tecknet.dev
+    service: http://jellysea-ui:8002
+  - hostname: watch.tecknet.dev
+    service: http://jellyfin:8096
+  - service: http_status:404

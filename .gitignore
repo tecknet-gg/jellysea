@@ -77,7 +77,8 @@ jellyfin/cache/
 seerr/config/
 
 # Cloudflared
-cloudflared/config/
+cloudflared/config/*.pem
+cloudflared/config/*.json
 
 # Recyclarr cache
 recyclarr/cache/
