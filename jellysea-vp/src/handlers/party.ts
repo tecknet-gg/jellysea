@@ -74,4 +74,28 @@ router.post('/api/parties/:id/auth', (req, res) => {
   }
 })
 
+router.patch('/api/parties/:id', (req, res) => {
+  const party = parties.get(req.params.id)
+  if (!party) {
+    res.status(404).json({ error: 'Party not found' })
+    return
+  }
+  const body = req.body as Partial<Party>
+  if (body.name !== undefined) party.name = body.name
+  if (body.status !== undefined) party.status = body.status
+  if (body.media !== undefined) party.media = body.media
+  const room = getRoom(party.id)
+  res.json({ ...party, memberCount: room?.peers.size ?? 0, passwordHash: undefined })
+})
+
+router.delete('/api/parties/:id', (req, res) => {
+  const party = parties.get(req.params.id)
+  if (!party) {
+    res.status(404).json({ error: 'Party not found' })
+    return
+  }
+  parties.delete(req.params.id)
+  res.json({ ok: true })
+})
+
 export { router as partyRouter, parties }

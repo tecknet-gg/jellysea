@@ -2,17 +2,24 @@ import Link from 'next/link'
 import CachedImage from '@app/components/Common/CachedImage'
 import type { Party, PartyStatus } from '@app/utils/partyTypes'
 
-function StatusBadge({ status }: { status: PartyStatus }) {
-  const styles: Record<PartyStatus, string> = {
-    waiting: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
-    ready: 'bg-green-500/20 text-green-400 border-green-500/30',
-    watching: 'bg-green-500/20 text-green-400 border-green-500/30',
-    paused: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
-  }
+const STATUS_LABELS: Record<PartyStatus, string> = {
+  waiting: 'Waiting for media',
+  ready: 'Ready to watch',
+  watching: 'Watching',
+  paused: 'Paused',
+}
 
+const STATUS_STYLES: Record<PartyStatus, string> = {
+  waiting: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
+  ready: 'bg-green-500/20 text-green-400 border-green-500/30',
+  watching: 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30',
+  paused: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+}
+
+function StatusBadge({ status }: { status: PartyStatus }) {
   return (
-    <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${styles[status]}`}>
-      {status}
+    <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${STATUS_STYLES[status]}`}>
+      {STATUS_LABELS[status]}
     </span>
   )
 }

@@ -1,5 +1,5 @@
 import axios from 'axios'
-import type { Party, CreatePartyRequest } from './partyTypes'
+import type { Party, CreatePartyRequest, PartyMedia } from './partyTypes'
 
 const BASE_URL =
   typeof process !== 'undefined' && process.env.NEXT_PUBLIC_SIGNALING_URL
@@ -30,4 +30,18 @@ export async function checkPartyPassword(id: string, password: string): Promise<
   } catch {
     return false
   }
+}
+
+export async function updatePartyMedia(id: string, media: PartyMedia): Promise<Party> {
+  const { data } = await api.patch<Party>(`/api/parties/${id}`, { media })
+  return data
+}
+
+export async function updatePartyStatus(id: string, status: Party['status']): Promise<Party> {
+  const { data } = await api.patch<Party>(`/api/parties/${id}`, { status })
+  return data
+}
+
+export async function deleteParty(id: string): Promise<void> {
+  await api.delete(`/api/parties/${id}`)
 }

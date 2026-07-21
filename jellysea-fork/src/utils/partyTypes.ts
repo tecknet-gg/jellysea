@@ -1,5 +1,16 @@
 export type PartyStatus = 'waiting' | 'ready' | 'watching' | 'paused'
 
+export interface PartyMedia {
+  tmdbId: number
+  mediaType: 'movie' | 'tv'
+  title: string
+  posterPath?: string
+  backdropPath?: string
+  overview?: string
+  seasonNumber?: number
+  episodeNumber?: number
+}
+
 export interface Party {
   id: string
   name: string
@@ -7,15 +18,7 @@ export interface Party {
   hostId: string
   hostName: string
   hostAvatar?: string
-  media?: {
-    tmdbId: number
-    mediaType: 'movie' | 'tv'
-    title: string
-    posterPath?: string
-    backdropPath?: string
-    seasonNumber?: number
-    episodeNumber?: number
-  }
+  media?: PartyMedia
   status: PartyStatus
   memberCount: number
   createdAt: number

@@ -12,6 +12,7 @@ export interface Party {
     title: string
     posterPath?: string
     backdropPath?: string
+    overview?: string
     seasonNumber?: number
     episodeNumber?: number
   }
