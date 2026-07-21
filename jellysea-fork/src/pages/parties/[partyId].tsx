@@ -738,6 +738,14 @@ const PartyRoomPage: NextPage = () => {
           isDetached={isDetached}
           onToggleDetach={() => { const next = !isDetached; setIsDetached(next); isDetachedRef.current = next }}
           preloadedStream={preloadedStream}
+          messages={messages}
+          onSendChat={(text: string) => {
+            const name = user?.displayName || user?.username || 'Anonymous'
+            setMessages((prev) => [...prev, { id: crypto.randomUUID(), senderId: '', senderName: name, text, timestamp: Date.now() }])
+            if (wsRef.current?.readyState === WebSocket.OPEN) {
+              wsRef.current.send(JSON.stringify({ type: 'chat', roomId: partyId, payload: { text, senderName: name }, senderId: '' }))
+            }
+          }}
         />
       )}
     </div>

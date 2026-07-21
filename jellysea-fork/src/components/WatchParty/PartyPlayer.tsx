@@ -5,6 +5,7 @@ import DriftOverlay from '@app/components/WatchParty/DriftOverlay'
 
 interface SyncPing { currentTime: number; isPlaying: boolean; timestamp: number }
 interface PreloadedStream { type: 'direct' | 'hls'; url: string; seasonNumber?: number; episodeNumber?: number }
+interface ChatMsg { id: string; senderName: string; text: string; timestamp: number; system?: boolean }
 
 interface PartyPlayerProps {
   tmdbId: number
@@ -22,11 +23,14 @@ interface PartyPlayerProps {
   isDetached: boolean
   onToggleDetach: () => void
   preloadedStream?: PreloadedStream | null
+  messages: ChatMsg[]
+  onSendChat: (text: string) => void
 }
 
 export default function PartyPlayer({
   tmdbId, mediaType, title, posterPath, seasonNumber, episodeNumber,
   partyId, isHost, wsRef, startAt, onClose, hostState, isDetached, onToggleDetach, preloadedStream,
+  messages, onSendChat,
 }: PartyPlayerProps) {
   const [resolved, setResolved] = useState<{ type: 'direct' | 'hls'; url: string; seasonNumber?: number; episodeNumber?: number } | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -34,6 +38,8 @@ export default function PartyPlayer({
   const [countdown, setCountdown] = useState(-1)
   const [pauseCountdown, setPauseCountdown] = useState(-1)
   const [drift, setDrift] = useState<number | null>(null)
+  const [showChat, setShowChat] = useState(false)
+  const [chatInput, setChatInput] = useState('')
   const pingRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const driftRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const wasPlayingRef = useRef(true)
@@ -119,11 +125,14 @@ export default function PartyPlayer({
       if (next <= 0) {
         setPauseCountdown(-1)
         const v = document.querySelector('video')
-        if (v && !v.paused) v.pause()
+        if (v && !v.paused) {
+          if (hostState) v.currentTime = hostState.currentTime
+          v.pause()
+        }
       } else setPauseCountdown(next)
     }, 1000)
     return () => clearTimeout(t)
-  }, [pauseCountdown])
+  }, [pauseCountdown, hostState])
 
   useEffect(() => {
     setDrift(null)
@@ -153,6 +162,13 @@ export default function PartyPlayer({
     }
     onClose()
   }, [wsRef, partyId, onClose])
+
+  const handleChatSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!chatInput.trim()) return
+    onSendChat(chatInput.trim())
+    setChatInput('')
+  }
 
   const retryResolve = () => { setError(null); resolveStream() }
 
@@ -188,7 +204,7 @@ export default function PartyPlayer({
       )}
 
       {pauseCountdown > 0 && !isHost && (
-        <div className="fixed right-8 top-20 z-[10001] rounded-xl bg-black/80 px-4 py-2 shadow-lg backdrop-blur">
+        <div className="fixed right-4 top-20 z-[10001] rounded-xl bg-black/80 px-4 py-2 shadow-lg backdrop-blur">
           <p className="text-sm text-white">Pausing in <span className="font-bold text-indigo-400">{pauseCountdown}</span></p>
         </div>
       )}
@@ -207,7 +223,40 @@ export default function PartyPlayer({
             episodeNumber={episodeNumber ?? resolved.episodeNumber}
             onClose={handleClose}
           />
-          <DriftOverlay drift={drift} isDetached={isDetached} onResync={handleResync} onToggleDetach={onToggleDetach} />
+          <DriftOverlay drift={drift} isHost={isHost} isDetached={isDetached} onResync={handleResync} onToggleDetach={onToggleDetach} />
+
+          <button
+            onClick={() => setShowChat((v) => !v)}
+            className="fixed bottom-24 right-4 z-[9999] rounded-xl bg-black/70 px-3 py-2 text-xs font-medium text-white/80 shadow-lg backdrop-blur hover:text-white"
+          >
+            {showChat ? 'Hide Chat' : `Chat (${messages.length})`}
+          </button>
+
+          {showChat && (
+            <div className="fixed bottom-36 right-4 z-[9999] flex h-80 w-72 flex-col rounded-xl bg-black/85 shadow-xl backdrop-blur ring-1 ring-white/10">
+              <div className="flex-1 overflow-y-auto p-3">
+                {messages.length === 0 && <p className="pt-8 text-center text-xs text-slate-500">Nothing to see here yet...</p>}
+                {messages.slice(-30).map((m) => (
+                  <div key={m.id} className="mb-2">
+                    {m.system ? (
+                      <p className="text-center text-[11px] text-slate-500 italic">{m.text}</p>
+                    ) : (
+                      <>
+                        <span className="text-xs font-semibold text-indigo-400">{m.senderName}</span>
+                        <p className="text-xs text-slate-300">{m.text}</p>
+                      </>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <form onSubmit={handleChatSubmit} className="border-t border-white/10 p-2">
+                <div className="flex gap-1.5">
+                  <input type="text" value={chatInput} onChange={(e) => setChatInput(e.target.value)} placeholder="Chat..." className="flex-1 rounded-lg bg-white/10 px-2.5 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none" />
+                  <button type="submit" disabled={!chatInput.trim()} className="rounded-lg bg-indigo-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-indigo-500 disabled:opacity-50">Send</button>
+                </div>
+              </form>
+            </div>
+          )}
         </>,
         document.body
       )}
