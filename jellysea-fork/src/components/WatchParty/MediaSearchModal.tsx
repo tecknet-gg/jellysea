@@ -1,7 +1,8 @@
 import { Fragment, useState, useEffect, useRef, useCallback } from 'react'
 import { Dialog, Transition } from '@headlessui/react'
-import { XMarkIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline'
+import { XMarkIcon, MagnifyingGlassIcon, CheckCircleIcon } from '@heroicons/react/24/outline'
 import CachedImage from '@app/components/Common/CachedImage'
+import { MediaStatus } from '@app/utils/types'
 import api from '@app/utils/api'
 import type { PartyMedia } from '@app/utils/partyTypes'
 
@@ -21,6 +22,9 @@ interface SearchResult {
   releaseDate?: string
   firstAirDate?: string
   overview?: string
+  mediaInfo?: {
+    status: number
+  }
 }
 
 export default function MediaSearchModal({ open, onClose, onSelect }: MediaSearchModalProps) {
@@ -43,7 +47,9 @@ export default function MediaSearchModal({ open, onClose, onSelect }: MediaSearc
     setLoading(true)
     try {
       const { data } = await api.get('/search', { params: { query: q } })
-      setResults((data.results ?? data).slice(0, 10))
+      const items: SearchResult[] = (data.results ?? data) || []
+      const available = items.filter((r: SearchResult) => r.mediaInfo?.status === MediaStatus.AVAILABLE)
+      setResults(available.slice(0, 10))
     } catch {
       setResults([])
     } finally {
@@ -80,7 +86,7 @@ export default function MediaSearchModal({ open, onClose, onSelect }: MediaSearc
                   type="text"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Search movies & TV shows..."
+                  placeholder="Search available movies & TV shows..."
                   className="flex-1 bg-transparent text-sm text-white placeholder-slate-500 focus:outline-none"
                 />
                 <button onClick={onClose} className="text-slate-400 hover:text-white">
@@ -129,6 +135,7 @@ export default function MediaSearchModal({ open, onClose, onSelect }: MediaSearc
                           {year && ` \u00b7 ${year}`}
                         </p>
                       </div>
+                      <CheckCircleIcon className="h-4 w-4 flex-shrink-0 text-green-500" title="Available on Jellyfin" />
                     </button>
                   )
                 })}

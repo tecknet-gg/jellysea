@@ -298,7 +298,9 @@ const PartyRoomPage: NextPage = () => {
         <div className="lg:col-span-2 space-y-4">
           {!party.media && (
             <div className="rounded-xl border border-dark-600 bg-dark-900 p-6 text-center">
-              <p className="text-sm text-slate-400">No media selected yet</p>
+              <p className="text-sm text-slate-400">
+                {isHost ? 'No media selected yet' : 'Waiting for the host to choose media...'}
+              </p>
               {isHost && (
                 <button
                   onClick={() => setShowMediaSearch(true)}
@@ -415,31 +417,14 @@ const PartyRoomPage: NextPage = () => {
                   {PARTY_STATUS_LABELS[party.status] || party.status}
                 </span>
               </div>
-              <div>
-                <p className="text-xs text-slate-500">Members Online</p>
-                <p className="text-sm text-slate-200">{memberCount}</p>
-              </div>
               {party.media && (
                 <div>
                   <p className="text-xs text-slate-500">Now Watching</p>
                   <p className="text-sm font-medium text-slate-200">{party.media.title}</p>
                 </div>
               )}
-              <div>
-                <p className="text-xs text-slate-500">Created</p>
-                <p className="text-sm text-slate-200">{new Date(party.createdAt).toLocaleDateString()}</p>
-              </div>
             </div>
           </div>
-
-          {!party.media && isHost && (
-            <button
-              onClick={() => setShowMediaSearch(true)}
-              className="w-full rounded-lg bg-gradient-to-br from-indigo-600 to-purple-600 px-4 py-2.5 text-sm font-medium text-white transition hover:from-indigo-500 hover:to-purple-500"
-            >
-              Select Media
-            </button>
-          )}
         </div>
       </div>
 
