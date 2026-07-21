@@ -145,11 +145,10 @@ const PartyRoomPage: NextPage = () => {
 
       if (msg.type === 'room-state') {
         setLiveMembers(msg.payload.peers?.length ?? 0)
-        const pid = myPeerIdRef.current
-        if (msg.payload.peers && pid) {
+        if (msg.payload.peers) {
           setOtherMembers(
-            msg.payload.peers.filter((p: { id: string; userId?: string }) =>
-              p.id !== pid && p.userId !== party?.hostId
+            msg.payload.peers.filter((p: { userId?: string }) =>
+              p.userId !== party?.hostId
             ).map((p: { displayName: string; avatar?: string }) => ({
               displayName: p.displayName,
               avatar: p.avatar,
@@ -168,6 +167,11 @@ const PartyRoomPage: NextPage = () => {
             timestamp: Date.now(),
           },
         ])
+      }
+
+      if (msg.type === 'party-ended') {
+        if (wsRef.current) wsRef.current.close()
+        router.push('/parties')
       }
     }
 
@@ -435,7 +439,7 @@ const PartyRoomPage: NextPage = () => {
               </div>
               {otherMembers.length > 0 && (
                 <div>
-                  <p className="text-xs text-slate-500">Members ({otherMembers.length})</p>
+                  <p className="text-xs text-slate-500">Members</p>
                   <div className="mt-1 space-y-1">
                     {otherMembers.map((m, i) => (
                       <div key={i} className="flex items-center gap-1.5">

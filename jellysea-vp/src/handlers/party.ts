@@ -1,5 +1,6 @@
 import { Router } from 'express'
 import { v4 as uuid } from 'uuid'
+import { WebSocket } from 'ws'
 import type { Party, CreatePartyRequest } from '../store/partyStore'
 import { getRoom } from '../store/roomStore'
 
@@ -93,6 +94,13 @@ router.delete('/api/parties/:id', (req, res) => {
   if (!party) {
     res.status(404).json({ error: 'Party not found' })
     return
+  }
+  const msg = JSON.stringify({ type: 'party-ended', roomId: party.id, payload: {}, senderId: 'server' })
+  const room = getRoom(party.id)
+  if (room) {
+    for (const [, peer] of room.peers) {
+      if (peer.ws.readyState === WebSocket.OPEN) peer.ws.send(msg)
+    }
   }
   parties.delete(req.params.id)
   res.json({ ok: true })

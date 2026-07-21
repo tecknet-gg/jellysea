@@ -39,7 +39,7 @@ interface MediaDetails {
 
 export default function LibraryBrowserModal({ open, onClose, onSelect }: LibraryBrowserModalProps) {
   const { data, error } = useSWR<MediaResultsResponse>(
-    open ? '/media?filter=allavailable&take=200&sort=title' : null,
+    open ? '/media?filter=allavailable&take=200&sort=mediaAdded' : null,
     (url: string) => api.get(url).then((res) => res.data),
     { revalidateOnFocus: false, dedupingInterval: 30000 }
   )
