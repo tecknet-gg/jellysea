@@ -13,6 +13,7 @@ import {
   HomeIcon,
   ShieldCheckIcon,
   TvIcon,
+  UserGroupIcon,
   WrenchScrewdriverIcon,
   WrenchIcon,
   XMarkIcon,
@@ -73,6 +74,12 @@ const navLinks: SidebarLinkProps[] = [
     label: 'Series',
     svgIcon: <TvIcon className="h-6 w-6" />,
     activeRegExp: /^\/discover\/tv/,
+  },
+  {
+    href: '/parties',
+    label: 'Parties',
+    svgIcon: <UserGroupIcon className="h-6 w-6" />,
+    activeRegExp: /^\/parties/,
   },
   {
     href: '/requests',

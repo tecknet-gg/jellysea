@@ -2,11 +2,15 @@ import express from 'express'
 import http from 'http'
 import { WebSocketServer, WebSocket } from 'ws'
 import { handleConnection } from './handlers/connection'
+import { partyRouter } from './handlers/party'
 import { getRoomCount, getConnectionCount } from './store/roomStore'
 
 const PORT = parseInt(process.env.PORT || '8004', 10)
 const app = express()
 const server = http.createServer(app)
+
+app.use(express.json())
+app.use('/vp', partyRouter)
 
 const wss = new WebSocketServer({ server })
 

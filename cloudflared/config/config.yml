@@ -3,7 +3,7 @@ credentials-file: /etc/cloudflared/89b40576-05ba-4c65-b735-5faca63c7a27.json
 
 ingress:
   - hostname: test.tecknet.dev
-    path: ^/vp/?$
+    path: ^/vp/|^/vp$
     service: http://jellysea-vp:8004
   - hostname: test.tecknet.dev
     service: http://jellysea:5055
