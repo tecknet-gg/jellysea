@@ -229,7 +229,8 @@ export default function MovieDetails() {
             type="tmdb"
             src={data.backdropPath ?? ""}
             alt=""
-            className="absolute inset-0 h-full w-full object-cover"
+            fill
+            className="object-cover"
           />
           <div
             className="absolute inset-0"

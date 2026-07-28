@@ -3,6 +3,7 @@ import CachedImage from '@app/components/Common/CachedImage'
 import SearchInput from '@app/components/Layout/SearchInput'
 import { usePlayer } from '@app/context/PlayerContext'
 import { useUser, Permission } from '@app/hooks/useUser'
+import useDebouncedState from '@app/hooks/useDebouncedState'
 import { Menu, Transition } from '@headlessui/react'
 import {
   AdjustmentsHorizontalIcon,
@@ -23,6 +24,9 @@ import Link from 'next/link'
 import { useRouter } from 'next/router'
 import { Fragment, useEffect, useState } from 'react'
 import { useIntl } from 'react-intl'
+import useSWR from 'swr'
+import api from '@app/utils/api'
+import type { MovieResult, TvResult, DiscoverResponse } from '@app/utils/types'
 
 const navLinks = [
   { href: '/', label: 'Home', icon: HomeIcon, regex: /^\/$/ },
@@ -73,11 +77,31 @@ export default function TopNav() {
   const { user, hasPermission, revalidate } = useUser()
   const { playerActive } = usePlayer()
   const [searchOpen, setSearchOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [debouncedQuery, setDebouncedQuery] = useState('')
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   useEffect(() => {
     if (searchOpen) setSearchOpen(false)
   }, [router.pathname])
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedQuery(searchQuery), 300)
+    return () => clearTimeout(t)
+  }, [searchQuery])
+
+  const { data: searchResults } = useSWR<DiscoverResponse<MovieResult | TvResult>>(
+    debouncedQuery.length >= 2 && searchOpen ? `/search?query=${encodeURIComponent(debouncedQuery)}&page=1` : null,
+    (url: string) => api.get(url).then((res) => res.data),
+    { revalidateOnFocus: false, dedupingInterval: 10000 }
+  )
+
+  const handleSearchOpen = () => setSearchOpen(true)
+  const handleSearchClose = () => {
+    setSearchOpen(false)
+    setSearchQuery('')
+    setDebouncedQuery('')
+  }
 
   const isAuthPage = router.pathname.match(/(login|setup|resetpassword)/)
   const isWatchPage = router.pathname.startsWith('/watch')
@@ -214,18 +238,77 @@ export default function TopNav() {
       {searchOpen && (
         <div className="searchbar-overlay animate-fade-in">
           <div className="flex items-center border-b border-midnight-700 px-4 py-3">
-            <div className="flex flex-1">
-              <SearchInput />
+            <div className="relative flex flex-1 items-center">
+              <MagnifyingGlassIcon className="pointer-events-none absolute left-4 h-5 w-5 text-slate-400" />
+              <input
+                autoFocus
+                type="search"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyUp={(e) => {
+                  if (e.key === 'Enter' && searchQuery.length >= 2) {
+                    router.push(`/search?query=${encodeURIComponent(searchQuery)}`)
+                    handleSearchClose()
+                  }
+                }}
+                placeholder="Search movies and series..."
+                className="w-full rounded-full border border-midnight-600 bg-midnight-900 py-2.5 pl-10 pr-4 text-sm text-white placeholder-slate-500 focus:border-accent-500 focus:outline-none"
+              />
             </div>
-            <button
-              onClick={() => setSearchOpen(false)}
-              className="btn-ghost ml-3 p-2"
-            >
+            <button onClick={handleSearchClose} className="btn-ghost ml-3 p-2">
               <XMarkIcon className="h-5 w-5" />
             </button>
           </div>
-          <div className="flex flex-1 items-center justify-center">
-            <p className="text-sm text-slate-500">Type to search movies and series...</p>
+
+          <div className="flex-1 overflow-y-auto px-4 py-4">
+            {!debouncedQuery || debouncedQuery.length < 2 ? (
+              <div className="flex h-full items-center justify-center">
+                <p className="text-sm text-slate-500">Type at least 2 characters to search...</p>
+              </div>
+            ) : !searchResults ? (
+              <div className="flex h-full items-center justify-center">
+                <div className="h-6 w-6 animate-spin rounded-full border-2 border-solid border-accent-500 border-t-transparent" />
+              </div>
+            ) : searchResults.results.length === 0 ? (
+              <div className="flex h-full items-center justify-center">
+                <p className="text-sm text-slate-500">No results found for &quot;{debouncedQuery}&quot;</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+                {searchResults.results.slice(0, 20).map((item) => {
+                  const isMovie = item.mediaType === 'movie'
+                  const mItem = item as MovieResult
+                  const tItem = item as TvResult
+                  const href = isMovie ? `/movie/${item.id}` : `/tv/${item.id}`
+                  return (
+                    <Link
+                      key={item.id}
+                      href={href}
+                      onClick={handleSearchClose}
+                      className="group relative overflow-hidden rounded-lg bg-midnight-800 transition hover:ring-2 hover:ring-accent-500"
+                    >
+                      <div className="aspect-[2/3]">
+                        <CachedImage
+                          type="tmdb"
+                          src={item.posterPath ?? ''}
+                          alt={isMovie ? mItem.title : tItem.name}
+                          className="h-full w-full object-cover"
+                          fill
+                        />
+                      </div>
+                      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-midnight-950 via-midnight-950/80 to-transparent p-2">
+                        <p className="truncate text-xs font-semibold text-white">
+                          {isMovie ? mItem.title : tItem.name}
+                        </p>
+                        <p className="text-[10px] text-slate-400">
+                          {isMovie ? mItem.releaseDate?.slice(0, 4) : tItem.firstAirDate?.slice(0, 4)}
+                        </p>
+                      </div>
+                    </Link>
+                  )
+                })}
+              </div>
+            )}
           </div>
         </div>
       )}
