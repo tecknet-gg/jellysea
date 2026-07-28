@@ -1,0 +1,150 @@
+name: Build & Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g. 0.5.0)'
+        required: true
+
+jobs:
+  build-frontend:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install pnpm
+        run: corepack enable && corepack prepare pnpm@latest --activate
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+        working-directory: ./jellysea-fork
+      - name: Build Next.js frontend
+        run: pnpm build:next
+        working-directory: ./jellysea-fork
+      - name: Upload frontend artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: next-build
+          path: ./jellysea-fork/.next
+          retention-days: 1
+
+  build-macos:
+    needs: build-frontend
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+      - name: Install pnpm
+        run: corepack enable && corepack prepare pnpm@latest --activate
+      - name: Install deps
+        run: |
+          pnpm install --frozen-lockfile
+          npm install -g @tauri-apps/cli@latest
+        working-directory: ./jellysea-fork
+      - name: Download frontend
+        uses: actions/download-artifact@v4
+        with:
+          name: next-build
+          path: ./jellysea-fork/.next
+      - name: Build Tauri app
+        run: cargo tauri build
+        working-directory: ./jellysea-fork/src-tauri
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+      - name: Upload macOS DMG
+        uses: actions/upload-artifact@v4
+        with:
+          name: jellysea-macos
+          path: ./jellysea-fork/src-tauri/target/release/bundle/dmg/*.dmg
+
+  build-windows:
+    needs: build-frontend
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+      - name: Install pnpm
+        run: corepack enable && corepack prepare pnpm@latest --activate
+      - name: Install deps
+        run: pnpm install --frozen-lockfile
+        working-directory: ./jellysea-fork
+      - name: Download frontend
+        uses: actions/download-artifact@v4
+        with:
+          name: next-build
+          path: ./jellysea-fork/.next
+      - name: Build Tauri app
+        run: cargo tauri build
+        working-directory: ./jellysea-fork/src-tauri
+      - name: Upload Windows MSI
+        uses: actions/upload-artifact@v4
+        with:
+          name: jellysea-windows
+          path: ./jellysea-fork/src-tauri/target/release/bundle/msi/*.msi
+
+  build-linux:
+    needs: build-frontend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+      - name: Install pnpm
+        run: corepack enable && corepack prepare pnpm@latest --activate
+      - name: Install system deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev \
+            librsvg2-dev patchelf libssl-dev libgtk-3-dev
+      - name: Install deps
+        run: pnpm install --frozen-lockfile
+        working-directory: ./jellysea-fork
+      - name: Download frontend
+        uses: actions/download-artifact@v4
+        with:
+          name: next-build
+          path: ./jellysea-fork/.next
+      - name: Build Tauri app
+        run: cargo tauri build
+        working-directory: ./jellysea-fork/src-tauri
+      - name: Upload Linux deb
+        uses: actions/upload-artifact@v4
+        with:
+          name: jellysea-linux
+          path: ./jellysea-fork/src-tauri/target/release/bundle/deb/*.deb
+
+  release:
+    needs: [build-macos, build-windows, build-linux]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: ./artifacts
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            ./artifacts/jellysea-macos/*.dmg
+            ./artifacts/jellysea-windows/*.msi
+            ./artifacts/jellysea-linux/*.deb
+          generate_release_notes: true
