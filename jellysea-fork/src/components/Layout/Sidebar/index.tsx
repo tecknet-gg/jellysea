@@ -150,13 +150,13 @@ function SidebarContent({
         onClick={() => onLinkClick?.()}
         className={`group relative flex items-center justify-center rounded-lg p-2 text-sm font-medium transition ${
           isActive
-            ? 'bg-gradient-to-br from-indigo-600 to-purple-600 text-white'
+            ? 'bg-gradient-to-br from-accent-600 to-accent-600 text-white'
             : 'text-slate-300 hover:bg-dark-800 hover:text-white'
         }`}
       >
         {link.svgIcon}
         {link.label === 'Requests' && pendingRequestsCount && pendingRequestsCount > 0 && (
-          <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-indigo-500" />
+          <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-accent-500" />
         )}
         {link.label === 'Issues' && openIssuesCount && openIssuesCount > 0 && (
           <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
@@ -170,7 +170,7 @@ function SidebarContent({
   return (
     <nav className="flex h-full flex-col">
       <div className="flex items-center justify-center pt-4 pb-2">
-        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 text-lg font-bold text-white">J</div>
+        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-accent-500 to-accent-600 text-lg font-bold text-white">J</div>
       </div>
       <div className="mt-4 flex flex-1 flex-col items-center gap-1 px-2">
         {navLinks.map(renderLink)}
@@ -222,7 +222,7 @@ function SidebarContent({
       </div>
       <div className="border-t border-dark-600 px-2 py-3">
         <Menu as="div" className="relative flex justify-center">
-          <Menu.Button className="flex rounded-full focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-dark-900">
+          <Menu.Button className="flex rounded-full focus:outline-none focus:ring-2 focus:ring-accent-500 focus:ring-offset-2 focus:ring-offset-dark-900">
             <CachedImage
               type="avatar"
               src={user?.avatar ?? ""}
@@ -250,7 +250,7 @@ function SidebarContent({
                     <Link
                       href="/profile"
                       className={`${
-                        active ? 'bg-gradient-to-br from-indigo-600 to-purple-600 text-white' : 'text-slate-300'
+                        active ? 'bg-gradient-to-br from-accent-600 to-accent-600 text-white' : 'text-slate-300'
                       } group flex w-full items-center px-4 py-2 text-sm`}
                     >
                       <CogIcon className="mr-3 h-5 w-5" />
@@ -263,7 +263,7 @@ function SidebarContent({
                     <button
                       onClick={handleLogout}
                       className={`${
-                        active ? 'bg-gradient-to-br from-indigo-600 to-purple-600 text-white' : 'text-slate-300'
+                        active ? 'bg-gradient-to-br from-accent-600 to-accent-600 text-white' : 'text-slate-300'
                       } group flex w-full items-center px-4 py-2 text-sm`}
                     >
                       <ArrowRightOnRectangleIcon className="mr-3 h-5 w-5" />

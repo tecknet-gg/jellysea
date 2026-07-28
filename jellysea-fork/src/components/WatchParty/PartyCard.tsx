@@ -12,7 +12,7 @@ const STATUS_LABELS: Record<PartyStatus, string> = {
 const STATUS_STYLES: Record<PartyStatus, string> = {
   waiting: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
   ready: 'bg-green-500/20 text-green-400 border-green-500/30',
-  watching: 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30',
+  watching: 'bg-accent-500/20 text-accent-400 border-accent-500/30',
   paused: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
 }
 
@@ -28,7 +28,7 @@ export default function PartyCard({ party }: { party: Party }) {
   return (
     <Link
       href={`/parties/${party.id}`}
-      className="relative flex w-72 overflow-hidden rounded-xl bg-dark-900 bg-cover bg-center p-4 text-slate-400 shadow ring-1 ring-dark-600 transition hover:ring-indigo-500/50 sm:w-96"
+      className="relative flex w-72 overflow-hidden rounded-xl bg-dark-900 bg-cover bg-center p-4 text-slate-400 shadow ring-1 ring-dark-600 transition hover:ring-accent-500/50 sm:w-96"
     >
       {party.media?.backdropPath && (
         <div className="absolute inset-0 z-0">

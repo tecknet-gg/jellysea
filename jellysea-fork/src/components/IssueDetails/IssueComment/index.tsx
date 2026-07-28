@@ -106,7 +106,7 @@ const IssueComment = ({
               {({ open }) => (
                 <>
                   <div>
-                    <Menu.Button className="flex items-center rounded-full text-gray-400 hover:text-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-gray-100">
+                    <Menu.Button className="flex items-center rounded-full text-gray-400 hover:text-gray-200 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:ring-offset-2 focus:ring-offset-gray-100">
                       <span className="sr-only">Open options</span>
                       <EllipsisVerticalIcon
                         className="h-5 w-5"

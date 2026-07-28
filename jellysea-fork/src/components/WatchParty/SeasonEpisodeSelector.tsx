@@ -67,7 +67,7 @@ export default function SeasonEpisodeSelector({
             setSelectedEpisode('')
             if (v !== '') onSeasonChange(v)
           }}
-          className="rounded-lg border border-dark-600 bg-dark-800 px-3 py-1.5 text-sm text-white focus:border-indigo-500 focus:outline-none"
+          className="rounded-lg border border-dark-600 bg-dark-800 px-3 py-1.5 text-sm text-white focus:border-accent-500 focus:outline-none"
         >
           <option value="">Select season</option>
           {seasons.map((s) => (
@@ -87,7 +87,7 @@ export default function SeasonEpisodeSelector({
               setSelectedEpisode(v)
               if (v !== '') onEpisodeChange(v)
             }}
-            className="rounded-lg border border-dark-600 bg-dark-800 px-3 py-1.5 text-sm text-white focus:border-indigo-500 focus:outline-none"
+            className="rounded-lg border border-dark-600 bg-dark-800 px-3 py-1.5 text-sm text-white focus:border-accent-500 focus:outline-none"
           >
             <option value="">Select episode</option>
             {episodes.map((ep) => (

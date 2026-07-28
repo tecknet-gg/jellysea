@@ -47,8 +47,8 @@ export default function LoginPage() {
 
   if (userLoading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-dark">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-solid border-indigo-500 border-t-transparent" />
+      <div className="flex h-screen items-center justify-center bg-midnight-900">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-solid border-accent-500 border-t-transparent" />
       </div>
     )
   }
@@ -56,14 +56,24 @@ export default function LoginPage() {
   if (user) return null
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-dark px-4">
-      <div className="w-full max-w-sm">
-        <div className="mb-8 text-center">
-          <h1 className="text-4xl font-bold text-white">Jellysea</h1>
-          <p className="mt-2 text-slate-400">Sign in to continue</p>
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-midnight-950 px-4">
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute -left-40 -top-40 h-96 w-96 rounded-full bg-accent-500/5 blur-3xl" />
+        <div className="absolute -bottom-40 -right-40 h-96 w-96 rounded-full bg-accent-400/5 blur-3xl" />
+      </div>
+
+      <div className="relative w-full max-w-sm">
+        <div className="glass-card mb-8 p-8 text-center">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-accent-400 to-accent-600 shadow-lg shadow-accent-500/20">
+            <svg className="h-7 w-7 text-white" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M8 5v14l11-7z" />
+            </svg>
+          </div>
+          <h1 className="text-3xl font-bold text-white">Jellysea</h1>
+          <p className="mt-1 text-sm text-slate-400">Sign in to continue</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="glass-card space-y-5 p-6">
           <div>
             <label htmlFor="username" className="block text-sm font-medium text-slate-300">
               Jellyfin Username
@@ -74,7 +84,7 @@ export default function LoginPage() {
               required
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              className="mt-1 block w-full rounded-md border border-dark-500 bg-dark-800 px-3 py-2 text-white placeholder-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm"
+              className="input-field mt-1"
               placeholder="username"
             />
           </div>
@@ -89,13 +99,13 @@ export default function LoginPage() {
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="mt-1 block w-full rounded-md border border-dark-500 bg-dark-800 px-3 py-2 text-white placeholder-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm"
+              className="input-field mt-1"
               placeholder="••••••••"
             />
           </div>
 
           {error && (
-            <div className="rounded-md bg-red-900/50 p-3 text-sm text-red-300">
+            <div className="rounded-lg bg-red-900/30 px-4 py-3 text-sm text-red-300 ring-1 ring-red-500/20">
               {error}
             </div>
           )}
@@ -103,8 +113,11 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="flex w-full justify-center rounded-md bg-gradient-to-br from-indigo-600 to-purple-600 px-4 py-2 text-sm font-medium text-white hover:from-indigo-500 hover:to-purple-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-dark disabled:opacity-50"
+            className="btn-primary w-full justify-center"
           >
+            {loading ? (
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-solid border-white border-t-transparent" />
+            ) : null}
             {loading ? 'Signing in...' : 'Sign in'}
           </button>
         </form>

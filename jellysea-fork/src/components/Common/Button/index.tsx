@@ -52,7 +52,7 @@ function Button<P extends ElementTypes = 'button'>(
   switch (buttonType) {
     case 'primary':
       buttonStyle.push(
-        'text-white border border-indigo-500 bg-indigo-600/80 hover:bg-indigo-600 hover:border-indigo-500 focus:border-indigo-700 focus:ring-indigo active:bg-indigo-600 active:border-indigo-700'
+        'text-white border border-accent-500 bg-accent-600/80 hover:bg-accent-600 hover:border-accent-500 focus:border-accent-700 active:bg-accent-600 active:border-accent-700'
       );
       break;
     case 'danger':
@@ -77,7 +77,7 @@ function Button<P extends ElementTypes = 'button'>(
       break;
     default:
       buttonStyle.push(
-        'text-gray-200 bg-gray-800/80 border-gray-600 hover:text-white hover:bg-gray-700 hover:border-gray-600 group-hover:text-white group-hover:bg-gray-700 group-hover:border-gray-600 focus:border-blue-300 focus:ring-blue active:text-gray-200 active:bg-gray-700 active:border-gray-600'
+        'text-gray-200 bg-midnight-800/80 border-midnight-600 hover:text-white hover:bg-midnight-700 hover:border-midnight-500 group-hover:text-white group-hover:bg-midnight-700 group-hover:border-midnight-500 focus:border-accent-300 active:text-gray-200 active:bg-midnight-700 active:border-midnight-500'
       );
   }
 

@@ -22,7 +22,7 @@ const badgeStyles: Record<MediaStatus, string> = {
   [MediaStatus.PARTIALLY_AVAILABLE]:
     'bg-green-500 border border-green-500 text-green-100',
   [MediaStatus.PROCESSING]:
-    'bg-indigo-500 border border-indigo-500 text-indigo-100',
+    'bg-accent-500 border border-accent-500 text-accent-100',
   [MediaStatus.PENDING]:
     'bg-yellow-500 border border-yellow-500 text-yellow-100',
   [MediaStatus.UNKNOWN]:

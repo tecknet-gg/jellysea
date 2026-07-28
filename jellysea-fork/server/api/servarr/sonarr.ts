@@ -416,7 +416,7 @@ class SonarrAPI extends ServarrBase<{
       await this.axios.delete(`/series/${id}`, {
         params: {
           deleteFiles: true,
-          addImportExclusion: false,
+          addImportExclusion: true,
         },
       });
       logger.info(`[Sonarr] Removed series ${title}`);

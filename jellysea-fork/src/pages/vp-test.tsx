@@ -192,7 +192,7 @@ const TestPanel: NextPage = () => {
           </span>
         </div>
         {roomId && (
-          <span className="rounded-full bg-indigo-600/20 px-2.5 py-1 text-xs font-medium text-indigo-400">
+          <span className="rounded-full bg-accent-600/20 px-2.5 py-1 text-xs font-medium text-accent-400">
             Room: {roomId}
           </span>
         )}
@@ -220,7 +220,7 @@ const TestPanel: NextPage = () => {
             <button
               onClick={createRoom}
               disabled={connectionState !== 'connected'}
-              className="w-full rounded-lg bg-gradient-to-br from-indigo-600 to-purple-600 px-4 py-2.5 text-sm font-medium text-white transition hover:from-indigo-500 hover:to-purple-500 disabled:opacity-50"
+              className="w-full rounded-lg bg-gradient-to-br from-accent-600 to-accent-600 px-4 py-2.5 text-sm font-medium text-white transition hover:from-accent-500 hover:to-accent-500 disabled:opacity-50"
             >
               Create Room
             </button>
@@ -234,12 +234,12 @@ const TestPanel: NextPage = () => {
                 onChange={(e) => setJoinRoomId(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') joinRoom() }}
                 placeholder="Room ID"
-                className="flex-1 rounded-lg border border-dark-600 bg-dark-800 px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-indigo-500 focus:outline-none"
+                className="flex-1 rounded-lg border border-dark-600 bg-dark-800 px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-accent-500 focus:outline-none"
               />
               <button
                 onClick={joinRoom}
                 disabled={connectionState !== 'connected' || !joinRoomId.trim()}
-                className="rounded-lg bg-gradient-to-br from-indigo-600 to-purple-600 px-4 py-2 text-sm font-medium text-white transition hover:from-indigo-500 hover:to-purple-500 disabled:opacity-50"
+                className="rounded-lg bg-gradient-to-br from-accent-600 to-accent-600 px-4 py-2 text-sm font-medium text-white transition hover:from-accent-500 hover:to-accent-500 disabled:opacity-50"
               >
                 Join
               </button>
@@ -274,7 +274,7 @@ const TestPanel: NextPage = () => {
                 {messages.map((msg) => (
                   <div key={msg.id} className="mb-3">
                     <div className="flex items-baseline gap-2">
-                      <span className="text-sm font-semibold text-indigo-400">
+                      <span className="text-sm font-semibold text-accent-400">
                         {msg.senderName}
                       </span>
                       <span className="text-xs text-slate-500">
@@ -293,12 +293,12 @@ const TestPanel: NextPage = () => {
                     value={chatInput}
                     onChange={(e) => setChatInput(e.target.value)}
                     placeholder="Type a message..."
-                    className="flex-1 rounded-lg border border-dark-600 bg-dark-800 px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-indigo-500 focus:outline-none"
+                    className="flex-1 rounded-lg border border-dark-600 bg-dark-800 px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-accent-500 focus:outline-none"
                   />
                   <button
                     type="submit"
                     disabled={!chatInput.trim()}
-                    className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-indigo-500 disabled:opacity-50"
+                    className="rounded-lg bg-accent-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-accent-500 disabled:opacity-50"
                   >
                     Send
                   </button>

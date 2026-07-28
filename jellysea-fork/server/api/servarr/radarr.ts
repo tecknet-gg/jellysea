@@ -273,7 +273,7 @@ class RadarrAPI extends ServarrBase<{ movieId: number }> {
       await this.axios.delete(`/movie/${id}`, {
         params: {
           deleteFiles: true,
-          addImportExclusion: false,
+          addImportExclusion: true,
         },
       });
       logger.info(`[Radarr] Removed movie ${title}`);

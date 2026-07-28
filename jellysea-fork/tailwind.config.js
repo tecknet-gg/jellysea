@@ -1,7 +1,5 @@
-// eslint-disable-next-line @typescript-eslint/no-require-imports
 const defaultTheme = require('tailwindcss/defaultTheme');
 
-/** @type {import('tailwindcss').Config} */
 module.exports = {
   mode: 'jit',
   content: [
@@ -12,14 +10,39 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        dark: {
-          DEFAULT: '#000000',
-          900: '#080c18',
-          800: '#0d1326',
-          700: '#141d38',
-          600: '#1a2744',
-          500: '#1e3a5f',
+        midnight: {
+          DEFAULT: '#0A0B0E',
+          950: '#0A0B0E',
+          900: '#0F1115',
+          800: '#181A20',
+          700: '#22252D',
+          600: '#2D313A',
+          500: '#3B404C',
         },
+        accent: {
+          50: '#EBF0FA',
+          100: '#C8D6F0',
+          200: '#A3BDE6',
+          300: '#7DA4DB',
+          400: '#5B8DEF',
+          500: '#3B6FDB',
+          600: '#2B55B8',
+          700: '#1E3F8A',
+          800: '#132A5E',
+          900: '#091736',
+        },
+        dark: {
+          DEFAULT: '#0A0B0E',
+          900: '#0A0B0E',
+          800: '#0F1115',
+          700: '#181A20',
+          600: '#22252D',
+          500: '#2D313A',
+        },
+      },
+      textColor: {
+        primary: '#F8FAFC',
+        muted: '#94A3B8',
       },
       transitionProperty: {
         'max-height': 'max-height',
@@ -33,42 +56,20 @@ module.exports = {
           css: {
             color: theme('colors.gray.300'),
             a: {
-              color: theme('colors.indigo.500'),
+              color: theme('colors.accent.500'),
               '&:hover': {
-                color: theme('colors.indigo.400'),
+                color: theme('colors.accent.400'),
               },
             },
-
-            h1: {
-              color: theme('colors.gray.300'),
-            },
-            h2: {
-              color: theme('colors.gray.300'),
-            },
-            h3: {
-              color: theme('colors.gray.300'),
-            },
-            h4: {
-              color: theme('colors.gray.300'),
-            },
-            h5: {
-              color: theme('colors.gray.300'),
-            },
-            h6: {
-              color: theme('colors.gray.300'),
-            },
-
-            strong: {
-              color: theme('colors.gray.400'),
-            },
-
-            code: {
-              color: theme('colors.gray.300'),
-            },
-
-            figcaption: {
-              color: theme('colors.gray.500'),
-            },
+            h1: { color: theme('colors.gray.300') },
+            h2: { color: theme('colors.gray.300') },
+            h3: { color: theme('colors.gray.300') },
+            h4: { color: theme('colors.gray.300') },
+            h5: { color: theme('colors.gray.300') },
+            h6: { color: theme('colors.gray.300') },
+            strong: { color: theme('colors.gray.400') },
+            code: { color: theme('colors.gray.300') },
+            figcaption: { color: theme('colors.gray.500') },
           },
         },
       }),

@@ -24,7 +24,7 @@ const PARTY_STATUS_LABELS: Record<string, string> = {
 const PARTY_STATUS_COLORS: Record<string, string> = {
   waiting: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
   ready: 'bg-green-500/20 text-green-400 border-green-500/30',
-  watching: 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30',
+  watching: 'bg-accent-500/20 text-accent-400 border-accent-500/30',
   paused: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
 }
 
@@ -32,6 +32,10 @@ const PartyRoomPage: NextPage = () => {
   const router = useRouter()
   const { user, hasPermission } = useUser()
   const { partyId } = router.query
+  const pid = Array.isArray(partyId) ? partyId[0] : partyId
+
+  const userRef = useRef(user)
+  useEffect(() => { userRef.current = user }, [user])
 
   const [party, setParty] = useState<Party | null>(null)
   const [loading, setLoading] = useState(true)
@@ -48,6 +52,7 @@ const PartyRoomPage: NextPage = () => {
   const [playbackActive, setPlaybackActive] = useState(false)
   const [playerStartAt, setPlayerStartAt] = useState<number | null>(null)
   const [hostSyncState, setHostSyncState] = useState<{ currentTime: number; isPlaying: boolean; timestamp: number } | null>(null)
+  const hostSyncStateRef = useRef<{ currentTime: number; isPlaying: boolean; timestamp: number } | null>(null)
   const [isDetached, setIsDetached] = useState(false)
   const [messages, setMessages] = useState<{ id: string; senderName: string; text: string; timestamp: number; system?: boolean }[]>([])
   const [chatInput, setChatInput] = useState('')
@@ -55,6 +60,7 @@ const PartyRoomPage: NextPage = () => {
   const [deleting, setDeleting] = useState(false)
   const [selectedSeason, setSelectedSeason] = useState<number | undefined>(undefined)
   const [selectedEpisode, setSelectedEpisode] = useState<number | undefined>(undefined)
+  const [reconnectCount, setReconnectCount] = useState(0)
 
   const wsRef = useRef<WebSocket | null>(null)
   const myPeerIdRef = useRef<string | null>(null)
@@ -64,6 +70,7 @@ const PartyRoomPage: NextPage = () => {
   const prevMemberCountRef = useRef(0)
   const prevPeerIdsRef = useRef<string[]>([])
   const playbackActiveRef = useRef(false)
+  const reconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [preloadedStream, setPreloadedStream] = useState<{ type: 'direct' | 'hls'; url: string; seasonNumber?: number; episodeNumber?: number } | null>(null)
 
   const signalingUrl =
@@ -76,18 +83,18 @@ const PartyRoomPage: NextPage = () => {
   const canManage = isHost || isAdmin
 
   const refreshParty = useCallback(async () => {
-    if (!partyId || typeof partyId !== 'string') return
+    if (!pid) return
     try {
       const list = await fetchParties()
-      const p = list.find((x) => x.id === partyId)
+      const p = list.find((x) => x.id === pid)
       if (p) setParty(p)
     } catch { /* ignore polling errors */ }
-  }, [partyId])
+  }, [pid])
 
   useEffect(() => {
-    if (!partyId || typeof partyId !== 'string') return
+    if (!pid) return
     fetchParties().then((list) => {
-      const p = list.find((x) => x.id === partyId)
+      const p = list.find((x) => x.id === pid)
       if (p) {
         setParty(p)
         if (user && p.bannedUserIds.includes(String(user.id))) {
@@ -100,14 +107,14 @@ const PartyRoomPage: NextPage = () => {
         setError('Party not found')
       }
     }).catch(() => setError('Failed to load party')).finally(() => setLoading(false))
-  }, [partyId])
+  }, [pid])
 
   useEffect(() => {
-    if (!authed || !partyId || typeof partyId !== 'string') return
+    if (!authed || !pid) return
 
     const timer = setInterval(refreshParty, 5000)
     return () => clearInterval(timer)
-  }, [authed, partyId, refreshParty])
+  }, [authed, pid, refreshParty])
 
   useEffect(() => {
     if (!authed || !party?.media || playerActive) return
@@ -128,18 +135,18 @@ const PartyRoomPage: NextPage = () => {
 
   const handlePasswordSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!password.trim() || typeof partyId !== 'string') return
-    const ok = await checkPartyPassword(partyId, password.trim())
+    if (!password.trim() || !pid) return
+    const ok = await checkPartyPassword(pid, password.trim())
     if (ok) {
       setAuthed(true)
       setPasswordError(null)
     } else {
       setPasswordError('Invalid password')
     }
-  }, [password, partyId])
+  }, [password, pid])
 
   useEffect(() => {
-    if (!authed || !partyId || typeof partyId !== 'string') return
+    if (!authed || !pid) return
 
     const ws = new WebSocket(signalingUrl)
     wsRef.current = ws
@@ -151,21 +158,27 @@ const PartyRoomPage: NextPage = () => {
       ws.send(JSON.stringify({
         type: 'set-user-info',
         roomId: '',
-        payload: { displayName: user?.displayName || user?.username || 'Anonymous', avatar: user?.avatar, userId: String(user?.id) },
+        payload: { displayName: userRef.current?.displayName || userRef.current?.username || 'Anonymous', avatar: userRef.current?.avatar, userId: String(userRef.current?.id) },
         senderId: '',
       }))
     }
 
     ws.onmessage = (event) => {
-      const msg = JSON.parse(event.data)
+      let msg: any
+      try { msg = JSON.parse(event.data) } catch { return }
+
+      if (msg.type === 'server-ping') {
+        ws.send(JSON.stringify({ type: 'server-pong' }))
+        return
+      }
 
       if (msg.type === 'peer-id') {
         myPeerIdRef.current = msg.payload.peerId
         setMyPeerId(msg.payload.peerId)
         ws.send(JSON.stringify({
           type: 'join-room',
-          roomId: partyId,
-          payload: { roomId: partyId },
+          roomId: pid,
+          payload: { roomId: pid },
           senderId: '',
         }))
       }
@@ -179,7 +192,7 @@ const PartyRoomPage: NextPage = () => {
         ws.send(JSON.stringify({
           type: 'create-room',
           roomId: '',
-          payload: { roomId: partyId },
+          payload: { roomId: pid },
           senderId: '',
         }))
       }
@@ -189,9 +202,9 @@ const PartyRoomPage: NextPage = () => {
         const peers = (msg.payload.peers ?? []) as { id: string; displayName: string }[]
         const newIds = peers.map((p) => p.id)
         const prevIds = prevPeerIdsRef.current
-        const joined = peers.filter((p) => !prevIds.includes(p.id))
-        if (joined.length > 0) {
-          for (const p of joined) {
+        const joinedPeers = peers.filter((p) => !prevIds.includes(p.id))
+        if (joinedPeers.length > 0) {
+          for (const p of joinedPeers) {
             setMessages((prev) => [...prev, {
               id: crypto.randomUUID(), senderId: '', senderName: 'System',
               text: `${p.displayName} joined the party`,
@@ -219,15 +232,17 @@ const PartyRoomPage: NextPage = () => {
       }
 
       if (msg.type === 'chat') {
-        setMessages((prev) => [
-          ...prev, {
-            id: crypto.randomUUID(),
-            senderId: msg.senderId,
-            senderName: msg.payload.senderName,
-            text: msg.payload.text,
-            timestamp: Date.now(),
-          },
-        ])
+        if (msg.senderId !== myPeerIdRef.current) {
+          setMessages((prev) => [
+            ...prev, {
+              id: crypto.randomUUID(),
+              senderId: msg.senderId,
+              senderName: msg.payload.senderName,
+              text: msg.payload.text,
+              timestamp: Date.now(),
+            },
+          ])
+        }
       }
 
       if (msg.type === 'party-ended') {
@@ -252,8 +267,11 @@ const PartyRoomPage: NextPage = () => {
         }])
       }
 
-      if (msg.type === 'sync-ping' && !isDetachedRef.current) {
-        setHostSyncState(msg.payload as { currentTime: number; isPlaying: boolean; timestamp: number })
+      if (msg.type === 'sync-ping') {
+        hostSyncStateRef.current = msg.payload as { currentTime: number; isPlaying: boolean; timestamp: number }
+        if (!isDetachedRef.current) {
+          setHostSyncState(hostSyncStateRef.current)
+        }
       }
 
       if (msg.type === 'close-player') {
@@ -266,18 +284,20 @@ const PartyRoomPage: NextPage = () => {
     ws.onclose = () => {
       setConnectionState('disconnected')
       if (joined) setRoomJoined(false)
+      reconnectTimer.current = setTimeout(() => setReconnectCount(c => c + 1), 3000)
     }
     ws.onerror = () => setConnectionState('disconnected')
 
     return () => {
-      if (wsRef.current && partyId && joined) {
+      if (reconnectTimer.current) clearTimeout(reconnectTimer.current)
+      if (wsRef.current && pid && joined) {
         wsRef.current.send(JSON.stringify({
-          type: 'leave-room', roomId: partyId, payload: {}, senderId: '',
+          type: 'leave-room', roomId: pid, payload: {}, senderId: '',
         }))
       }
       ws.close()
     }
-  }, [authed, partyId, signalingUrl, user])
+  }, [authed, pid, signalingUrl, reconnectCount])
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -291,18 +311,18 @@ const PartyRoomPage: NextPage = () => {
       id: crypto.randomUUID(), senderId: '', senderName: name, text: chatInput.trim(), timestamp: Date.now(),
     }])
     wsRef.current.send(JSON.stringify({
-      type: 'chat', roomId: partyId,
+      type: 'chat', roomId: pid,
       payload: { text: chatInput.trim(), senderName: name },
       senderId: '',
     }))
     setChatInput('')
-  }, [chatInput, partyId, user, roomJoined])
+  }, [chatInput, pid, user, roomJoined])
 
   const handleSelectMedia = useCallback(async (media: PartyMedia) => {
-    if (!partyId || typeof partyId !== 'string') return
+    if (!pid) return
     try {
-      await updatePartyMedia(partyId, media)
-      await updatePartyStatus(partyId, 'ready')
+      await updatePartyMedia(pid, media)
+      await updatePartyStatus(pid, 'ready')
       await refreshParty()
       setMessages((prev) => [...prev, {
         id: crypto.randomUUID(), senderId: '', senderName: 'System',
@@ -310,54 +330,54 @@ const PartyRoomPage: NextPage = () => {
         timestamp: Date.now(), system: true,
       }])
     } catch { /* ignore */ }
-  }, [partyId, refreshParty])
+  }, [pid, refreshParty])
 
   const handleSeasonEpisodeUpdate = useCallback(async () => {
-    if (!partyId || typeof partyId !== 'string' || !party?.media) return
+    if (!pid || !party?.media) return
     try {
-      await updatePartyMedia(partyId, {
+      await updatePartyMedia(pid, {
         ...party.media,
         seasonNumber: selectedSeason,
         episodeNumber: selectedEpisode,
       })
       await refreshParty()
     } catch { /* ignore */ }
-  }, [partyId, party?.media, selectedSeason, selectedEpisode, refreshParty])
+  }, [pid, party?.media, selectedSeason, selectedEpisode, refreshParty])
 
   const handleRemoveMedia = useCallback(async () => {
-    if (!partyId || typeof partyId !== 'string') return
+    if (!pid) return
     try {
-      await updatePartyMedia(partyId, null)
-      await updatePartyStatus(partyId, 'waiting')
+      await updatePartyMedia(pid, null)
+      await updatePartyStatus(pid, 'waiting')
       await refreshParty()
     } catch { /* ignore */ }
-  }, [partyId, refreshParty])
+  }, [pid, refreshParty])
 
   const handleDeleteParty = useCallback(async () => {
-    if (!partyId || typeof partyId !== 'string') return
+    if (!pid) return
     setDeleting(true)
     try {
-      await deleteParty(partyId)
+      await deleteParty(pid)
       router.push('/parties')
     } catch {
       setDeleting(false)
     }
-  }, [partyId, router])
+  }, [pid, router])
 
   const handleKickMember = useCallback((targetId: string) => {
     if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return
     wsRef.current.send(JSON.stringify({
-      type: 'kick-member', roomId: partyId, payload: { targetId }, senderId: '',
+      type: 'kick-member', roomId: pid, payload: { targetId }, senderId: '',
     }))
-  }, [partyId])
+  }, [pid])
 
   const handleUnban = useCallback(async (userId: string) => {
-    if (!partyId || typeof partyId !== 'string') return
+    if (!pid) return
     try {
-      await unbanUser(partyId, userId)
+      await unbanUser(pid, userId)
       await refreshParty()
     } catch { /* ignore */ }
-  }, [partyId, refreshParty])
+  }, [pid, refreshParty])
 
   const handleStartWatching = useCallback(() => {
     if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN || !party?.media) return
@@ -368,12 +388,12 @@ const PartyRoomPage: NextPage = () => {
     const m = party.media
     wsRef.current.send(JSON.stringify({
       type: 'media-start',
-      roomId: partyId,
+      roomId: pid,
       payload: { startAt, tmdbId: m.tmdbId, mediaType: m.mediaType, title: m.title, posterPath: m.posterPath, seasonNumber: m.seasonNumber, episodeNumber: m.episodeNumber },
       senderId: '',
     }))
-    updatePartyStatus(partyId as string, 'watching').catch(() => {})
-  }, [partyId, party?.media, wsRef])
+    updatePartyStatus(pid!, 'watching').catch(() => {})
+  }, [pid, party?.media, wsRef])
 
   const handleClosePlayer = useCallback(() => {
     setPlayerActive(false)
@@ -382,10 +402,11 @@ const PartyRoomPage: NextPage = () => {
     playbackActiveRef.current = false
     setPlayerStartAt(null)
     setHostSyncState(null)
+    hostSyncStateRef.current = null
     setIsDetached(false)
     isDetachedRef.current = false
-    if (partyId) updatePartyStatus(partyId as string, 'ready').catch(() => {})
-  }, [partyId])
+    if (pid && isHost) updatePartyStatus(pid, 'ready').catch(() => {})
+  }, [pid, isHost])
 
   const handleJoinPlayback = useCallback(() => {
     if (!party?.media) return
@@ -422,7 +443,7 @@ const PartyRoomPage: NextPage = () => {
     return (
       <div className="mt-16 text-center">
         <p className="text-lg text-red-400">{error}</p>
-        <Link href="/parties" className="mt-4 inline-block text-sm text-indigo-400 hover:text-indigo-300">
+        <Link href="/parties" className="mt-4 inline-block text-sm text-accent-400 hover:text-accent-300">
           &larr; Back to parties
         </Link>
       </div>
@@ -442,11 +463,11 @@ const PartyRoomPage: NextPage = () => {
               type="password" value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Password"
-              className="w-full rounded-lg border border-dark-600 bg-dark-800 px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-indigo-500 focus:outline-none"
+              className="w-full rounded-lg border border-dark-600 bg-dark-800 px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-accent-500 focus:outline-none"
             />
             {passwordError && <p className="text-sm text-red-400">{passwordError}</p>}
             <button type="submit" disabled={!password.trim()}
-              className="w-full rounded-lg bg-gradient-to-br from-indigo-600 to-purple-600 px-4 py-2 text-sm font-medium text-white hover:from-indigo-500 hover:to-purple-500 disabled:opacity-50"
+              className="w-full rounded-lg bg-gradient-to-br from-accent-600 to-accent-600 px-4 py-2 text-sm font-medium text-white hover:from-accent-500 hover:to-accent-500 disabled:opacity-50"
             >
               Join Party
             </button>
@@ -459,7 +480,7 @@ const PartyRoomPage: NextPage = () => {
   return (
     <div>
       <div className="mb-4">
-        <Link href="/parties" className="text-sm text-indigo-400 hover:text-indigo-300">
+        <Link href="/parties" className="text-sm text-accent-400 hover:text-accent-300">
           &larr; Back to parties
         </Link>
       </div>
@@ -497,7 +518,7 @@ const PartyRoomPage: NextPage = () => {
               {isHost && (
                 <button
                   onClick={() => setShowMediaSearch(true)}
-                  className="mt-3 rounded-lg bg-gradient-to-br from-indigo-600 to-purple-600 px-4 py-2 text-sm font-medium text-white hover:from-indigo-500 hover:to-purple-500"
+                  className="mt-3 rounded-lg bg-gradient-to-br from-accent-600 to-accent-600 px-4 py-2 text-sm font-medium text-white hover:from-accent-500 hover:to-accent-500"
                 >
                   Select Movie or TV Show
                 </button>
@@ -551,7 +572,7 @@ const PartyRoomPage: NextPage = () => {
                       {isHost && selectedSeason && selectedEpisode && (
                         <button
                           onClick={handleSeasonEpisodeUpdate}
-                          className="mt-2 rounded-lg bg-indigo-600/80 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-500"
+                          className="mt-2 rounded-lg bg-accent-600/80 px-3 py-1.5 text-xs font-medium text-white hover:bg-accent-500"
                         >
                           Update Season / Episode
                         </button>
@@ -568,7 +589,7 @@ const PartyRoomPage: NextPage = () => {
                     <div className="mt-3 flex flex-wrap gap-2">
                       <button
                         onClick={() => setShowMediaSearch(true)}
-                        className="rounded-lg bg-indigo-600/80 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-500"
+                        className="rounded-lg bg-accent-600/80 px-3 py-1.5 text-xs font-medium text-white hover:bg-accent-500"
                       >
                         Change
                       </button>
@@ -593,7 +614,7 @@ const PartyRoomPage: NextPage = () => {
                     <div className="mt-3">
                       <button
                         onClick={handleJoinPlayback}
-                        className="flex items-center gap-1 rounded-lg bg-indigo-600/80 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-500"
+                        className="flex items-center gap-1 rounded-lg bg-accent-600/80 px-3 py-1.5 text-xs font-medium text-white hover:bg-accent-500"
                       >
                         <PlayIcon className="h-3.5 w-3.5" />
                         Join Playback
@@ -622,7 +643,7 @@ const PartyRoomPage: NextPage = () => {
                   ) : (
                     <>
                       <div className="flex items-baseline gap-2">
-                        <span className="text-sm font-semibold text-indigo-400">{m.senderName}</span>
+                        <span className="text-sm font-semibold text-accent-400">{m.senderName}</span>
                         <span className="text-xs text-slate-500">{new Date(m.timestamp).toLocaleTimeString()}</span>
                       </div>
                       <p className="text-sm text-slate-300">{m.text}</p>
@@ -636,10 +657,10 @@ const PartyRoomPage: NextPage = () => {
               <div className="flex gap-2">
                 <input type="text" value={chatInput} onChange={(e) => setChatInput(e.target.value)}
                   placeholder="Type a message..." disabled={!roomJoined}
-                  className="flex-1 rounded-lg border border-dark-600 bg-dark-800 px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-indigo-500 focus:outline-none disabled:opacity-50"
+                  className="flex-1 rounded-lg border border-dark-600 bg-dark-800 px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-accent-500 focus:outline-none disabled:opacity-50"
                 />
                 <button type="submit" disabled={!chatInput.trim() || !roomJoined}
-                  className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-50"
+                  className="rounded-lg bg-accent-600 px-4 py-2 text-sm font-medium text-white hover:bg-accent-500 disabled:opacity-50"
                 >
                   Send
                 </button>
@@ -729,12 +750,13 @@ const PartyRoomPage: NextPage = () => {
           posterPath={party.media.posterPath}
           seasonNumber={party.media.seasonNumber}
           episodeNumber={party.media.episodeNumber}
-          partyId={typeof partyId === 'string' ? partyId : undefined}
+          partyId={pid}
           isHost={isHost}
           wsRef={wsRef}
           startAt={playerStartAt}
           onClose={handleClosePlayer}
           hostState={hostSyncState}
+          hostStateRef={hostSyncStateRef}
           isDetached={isDetached}
           onToggleDetach={() => { const next = !isDetached; setIsDetached(next); isDetachedRef.current = next }}
           preloadedStream={preloadedStream}
@@ -743,7 +765,7 @@ const PartyRoomPage: NextPage = () => {
             const name = user?.displayName || user?.username || 'Anonymous'
             setMessages((prev) => [...prev, { id: crypto.randomUUID(), senderId: '', senderName: name, text, timestamp: Date.now() }])
             if (wsRef.current?.readyState === WebSocket.OPEN) {
-              wsRef.current.send(JSON.stringify({ type: 'chat', roomId: partyId, payload: { text, senderName: name }, senderId: '' }))
+              wsRef.current.send(JSON.stringify({ type: 'chat', roomId: pid, payload: { text, senderName: name }, senderId: '' }))
             }
           }}
         />

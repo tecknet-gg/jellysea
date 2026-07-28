@@ -96,7 +96,7 @@ export default function MediaSearchModal({ open, onClose, onSelect }: MediaSearc
               <div className="max-h-96 overflow-y-auto p-2">
                 {loading && (
                   <div className="flex justify-center py-8">
-                    <div className="h-5 w-5 animate-spin rounded-full border-2 border-solid border-indigo-500 border-t-transparent" />
+                    <div className="h-5 w-5 animate-spin rounded-full border-2 border-solid border-accent-500 border-t-transparent" />
                   </div>
                 )}
                 {!loading && query && results.length === 0 && (

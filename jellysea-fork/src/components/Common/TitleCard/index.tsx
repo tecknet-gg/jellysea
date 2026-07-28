@@ -15,6 +15,7 @@ import {
   MinusSmallIcon,
   TrashIcon,
 } from '@heroicons/react/24/solid'
+import { PlayIcon } from '@heroicons/react/24/solid'
 
 interface TitleCardProps {
   id: number
@@ -38,7 +39,7 @@ const statusConfig: Record<
   3: {
     icon: <ClockIcon className="h-3 w-3" />,
     className:
-      'bg-indigo-500 border-indigo-400 ring-indigo-400 text-indigo-100',
+      'bg-accent-500 border-accent-400 ring-accent-400 text-accent-100',
   },
   4: {
     icon: <MinusSmallIcon className="h-3 w-3" />,
@@ -91,8 +92,8 @@ export default function TitleCard({ id, image, year, title, userScore, mediaType
       />
       <Link href={mediaType === 'movie' ? `/movie/${id}` : `/tv/${id}`}>
         <div
-          className={`relative cursor-pointer rounded-xl bg-dark-900 shadow ring-1 transition duration-300 ${
-            showDetail ? 'scale-105 shadow-lg ring-dark-500' : 'scale-100 shadow ring-dark-600'
+          className={`relative cursor-pointer rounded-xl bg-midnight-900 shadow ring-1 transition duration-300 ${
+            showDetail ? 'scale-105 shadow-lg ring-midnight-600' : 'scale-100 shadow ring-midnight-700'
           }`}
           style={{ paddingBottom: '150%' }}
           onMouseEnter={() => setShowDetail(true)}
@@ -113,7 +114,7 @@ export default function TitleCard({ id, image, year, title, userScore, mediaType
 
           {currentStatus && currentStatus !== MediaStatus.UNKNOWN && statusConfig[currentStatus] && (
             <div
-              className={`absolute right-2 top-2 rounded-full shadow-md w-5 h-5 ring-1 flex items-center justify-center ${
+              className={`absolute left-2 top-2 rounded-full shadow-md w-5 h-5 ring-1 flex items-center justify-center ${
                 statusConfig[currentStatus].className
               }`}
             >
@@ -122,31 +123,36 @@ export default function TitleCard({ id, image, year, title, userScore, mediaType
           )}
 
           {showDetail && (
-            <div className="absolute inset-0 rounded-xl bg-gradient-to-t from-dark via-dark/60 to-transparent p-3 transition-opacity">
+            <div className="absolute inset-0 rounded-xl bg-gradient-to-t from-midnight-950 via-midnight-900/70 to-transparent p-2 transition-opacity">
               <div className="flex h-full flex-col justify-end">
-                <div className="text-sm font-bold text-white leading-tight mb-1 line-clamp-2">{title}</div>
-                {year && <div className="text-xs text-slate-300 mb-1">{year}</div>}
+                <div className="text-xs font-bold text-white leading-tight line-clamp-2">{title}</div>
+                {year && <div className="text-[10px] text-slate-400 mt-0.5">{year}</div>}
                 {displayScore !== undefined && displayScore > 0 && (
-                  <div className="text-xs text-yellow-400 mb-1">
-                    {Number(displayScore).toFixed(1)}
-                  </div>
+                  <div className="text-[10px] text-yellow-400 mt-0.5">{Number(displayScore).toFixed(1)}</div>
                 )}
-                {!currentStatus ||
-                currentStatus === MediaStatus.UNKNOWN ||
-                currentStatus === MediaStatus.DELETED ? (
-                  showRequestButton && (
-                    <button
-                      onClick={(e) => {
-                        e.preventDefault()
-                        e.stopPropagation()
-                        setShowRequestModal(true)
-                      }}
-                      className="mt-2 inline-flex items-center justify-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-indigo-500"
-                    >
-                      <ArrowDownTrayIcon className="h-3.5 w-3.5" />
-                      Request
-                    </button>
-                  )
+                {currentStatus === MediaStatus.AVAILABLE || currentStatus === MediaStatus.PARTIALLY_AVAILABLE ? (
+                  <Link
+                    href={mediaType === 'movie' ? `/movie/${id}` : `/tv/${id}`}
+                    onClick={(e) => e.stopPropagation()}
+                    className="mt-1 inline-flex items-center justify-center gap-1 rounded-md bg-accent-500 px-2 py-1 text-[10px] font-semibold text-white transition hover:bg-accent-600"
+                  >
+                    <PlayIcon className="h-3 w-3" />
+                    Play
+                  </Link>
+                ) : (!currentStatus ||
+                  currentStatus === MediaStatus.UNKNOWN ||
+                  currentStatus === MediaStatus.DELETED) && showRequestButton ? (
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      setShowRequestModal(true)
+                    }}
+                    className="mt-1 inline-flex items-center justify-center gap-1 rounded-md bg-accent-500 px-2 py-1 text-[10px] font-semibold text-white transition hover:bg-accent-600"
+                  >
+                    <ArrowDownTrayIcon className="h-3 w-3" />
+                    Request
+                  </button>
                 ) : null}
               </div>
             </div>

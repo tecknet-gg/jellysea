@@ -117,8 +117,8 @@ export default function PlayButton({
         disabled={isLoading}
         className={`inline-flex items-center rounded-full font-semibold text-white transition-all ${
           isLoading
-            ? 'cursor-wait bg-green-500/60'
-            : 'bg-green-500 hover:bg-green-400 hover:scale-105 active:scale-100'
+            ? 'cursor-wait bg-accent-500/60'
+            : 'bg-accent-600 hover:bg-accent-500 hover:scale-105 active:scale-100'
         } ${sizeClasses[size]} ${className}`}
       >
         {isLoading ? (

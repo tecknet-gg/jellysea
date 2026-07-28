@@ -37,7 +37,7 @@ export default function JellyseaList({ items, isLoading, isLoadingMore, isReachi
           <div key={i} className="w-full">
             <div className="relative rounded-xl bg-dark-900" style={{ paddingBottom: '150%' }}>
               <div className="absolute inset-0 flex items-center justify-center">
-                <div className="h-6 w-6 animate-spin rounded-full border-2 border-solid border-indigo-500 border-t-transparent" />
+                <div className="h-6 w-6 animate-spin rounded-full border-2 border-solid border-accent-500 border-t-transparent" />
               </div>
             </div>
           </div>
@@ -78,7 +78,7 @@ export default function JellyseaList({ items, isLoading, isLoadingMore, isReachi
           <div className="w-full">
             <div className="relative rounded-xl bg-dark-900" style={{ paddingBottom: '150%' }}>
               <div className="absolute inset-0 flex items-center justify-center">
-                <div className="h-6 w-6 animate-spin rounded-full border-2 border-solid border-indigo-500 border-t-transparent" />
+                <div className="h-6 w-6 animate-spin rounded-full border-2 border-solid border-accent-500 border-t-transparent" />
               </div>
             </div>
           </div>

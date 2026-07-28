@@ -189,7 +189,7 @@ const JellyfinLogin = ({ revalidate, serverType }: JellyfinLoginProps) => {
                                     : ''
                                 }forgotpassword.html`
                           }
-                          className="pt-2 text-sm text-indigo-500 hover:text-indigo-400"
+                          className="pt-2 text-sm text-accent-500 hover:text-accent-400"
                         >
                           {intl.formatMessage(messages.forgotpassword)}
                         </a>

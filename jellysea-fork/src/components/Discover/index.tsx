@@ -5,20 +5,18 @@ import RecentRequestsSlider from '@app/components/Discover/RecentRequestsList'
 import GenreSlider from '@app/components/Discover/GenreSlider'
 import StudioSlider from '@app/components/Discover/StudioSlider'
 import NetworkSlider from '@app/components/Discover/NetworkSlider'
-
 export default function Discover() {
   return (
-    <div>
-      <Header>Discover</Header>
-
+    <div className="animate-fade-in">
       <RecentlyAddedSlider />
-      <RecentRequestsSlider />
 
       <MediaSlider
         title="Trending"
         url="/discover/trending"
         sliderKey="trending"
       />
+
+      <RecentRequestsSlider />
 
       <MediaSlider
         title="Popular Movies"

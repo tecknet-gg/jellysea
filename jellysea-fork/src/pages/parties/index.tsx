@@ -55,7 +55,7 @@ const PartiesPage: NextPage = () => {
         <Header>Watch Parties</Header>
         <button
           onClick={() => setShowCreate(true)}
-          className="rounded-lg bg-gradient-to-br from-indigo-600 to-purple-600 px-4 py-2 text-sm font-medium text-white transition hover:from-indigo-500 hover:to-purple-500"
+          className="rounded-lg bg-gradient-to-br from-accent-600 to-accent-600 px-4 py-2 text-sm font-medium text-white transition hover:from-accent-500 hover:to-accent-500"
         >
           Create Party
         </button>

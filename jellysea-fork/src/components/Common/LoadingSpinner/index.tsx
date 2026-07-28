@@ -1,6 +1,6 @@
 export const SmallLoadingSpinner = () => {
   return (
-    <div className="inset-0 flex h-full w-full items-center justify-center text-gray-200">
+    <div className="inset-0 flex h-full w-full items-center justify-center text-accent-500">
       <svg
         className="h-10 w-10"
         viewBox="0 0 38 38"
@@ -9,7 +9,7 @@ export const SmallLoadingSpinner = () => {
       >
         <g fill="none" fillRule="evenodd">
           <g transform="translate(1 1)" strokeWidth="2">
-            <circle strokeOpacity=".5" cx="18" cy="18" r="18" />
+            <circle strokeOpacity=".2" cx="18" cy="18" r="18" />
             <path d="M36 18c0-9.94-8.06-18-18-18">
               <animateTransform
                 attributeName="transform"
@@ -29,7 +29,7 @@ export const SmallLoadingSpinner = () => {
 
 const LoadingSpinner = () => {
   return (
-    <div className="inset-0 flex h-64 items-center justify-center text-gray-200">
+    <div className="inset-0 flex h-64 items-center justify-center text-accent-500">
       <svg
         className="h-16 w-16"
         viewBox="0 0 38 38"
@@ -38,7 +38,7 @@ const LoadingSpinner = () => {
       >
         <g fill="none" fillRule="evenodd">
           <g transform="translate(1 1)" strokeWidth="2">
-            <circle strokeOpacity=".5" cx="18" cy="18" r="18" />
+            <circle strokeOpacity=".2" cx="18" cy="18" r="18" />
             <path d="M36 18c0-9.94-8.06-18-18-18">
               <animateTransform
                 attributeName="transform"

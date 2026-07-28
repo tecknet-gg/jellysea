@@ -15,8 +15,14 @@ import {
   PlayIcon,
   SpeakerWaveIcon,
   SpeakerXMarkIcon,
+  ArrowsRightLeftIcon,
+  LinkSlashIcon,
+  LinkIcon,
+  ChatBubbleLeftRightIcon,
 } from '@heroicons/react/24/outline'
 import { useEffect, useRef, useState, useCallback } from 'react'
+
+interface ChatMsg { id: string; senderName: string; text: string; timestamp: number; system?: boolean }
 
 interface VideoPlayerProps {
   type: 'direct' | 'hls'
@@ -30,6 +36,14 @@ interface VideoPlayerProps {
   episodeNumber?: number
   onNextEpisode?: (currentSeason: number, currentEpisode: number) => Promise<ResolveNextResult | null>
   onClose: () => void
+  drift?: number | null
+  hostPaused?: boolean
+  isDetached?: boolean
+  isHost?: boolean
+  onResync?: () => void
+  onToggleDetach?: () => void
+  messages?: ChatMsg[]
+  onSendChat?: (text: string) => void
 }
 
 const PLAYBACK_SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2]
@@ -55,15 +69,25 @@ export default function VideoPlayer({
   episodeNumber: initialEpisodeNumber,
   onNextEpisode,
   onClose,
+  drift,
+  hostPaused,
+  isDetached,
+  isHost,
+  onResync,
+  onToggleDetach,
+  messages,
+  onSendChat,
 }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const progressRef = useRef<HTMLDivElement>(null)
   const hlsRef = useRef<Hls | null>(null)
-  const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const cursorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const saveTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const initialSeekDone = useRef(false)
   const loadingNextRef = useRef(false)
+  const volumeSliderId = useRef(`vol-${Math.random().toString(36).slice(2)}`).current
+  const volumeStyleRef = useRef<HTMLStyleElement | null>(null)
 
   const [activeStreamUrl, setActiveStreamUrl] = useState(initialStreamUrl)
   const [activeTitle, setActiveTitle] = useState(initialTitle)
@@ -75,7 +99,9 @@ export default function VideoPlayer({
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
   const [isFullscreen, setIsFullscreen] = useState(false)
-  const [showControls, setShowControls] = useState(true)
+  const [showBottom, setShowBottom] = useState(false)
+  const [showTop, setShowTop] = useState(false)
+  const [cursorHidden, setCursorHidden] = useState(false)
   const [isHoveringControls, setIsHoveringControls] = useState(false)
   const [levels, setLevels] = useState<{ index: number; label: string; height: number }[]>([])
   const [currentLevel, setCurrentLevel] = useState(-1)
@@ -87,22 +113,32 @@ export default function VideoPlayer({
   const [speed, setSpeed] = useState(1)
   const [showSpeedMenu, setShowSpeedMenu] = useState(false)
   const [isFinished, setIsFinished] = useState(false)
+  const [chatVisible, setChatVisible] = useState(() => !!messages)
+  const [chatInputOpen, setChatInputOpen] = useState(false)
+  const [chatText, setChatText] = useState('')
+  const recentMessages = useRef<Set<string>>(new Set())
 
   const canGoNext = mediaType === 'tv' && activeSeasonNumber !== undefined && activeEpisodeNumber !== undefined && !!onNextEpisode
 
   const { saveProgress, clearProgress } = usePlaybackProgress()
 
-  const scheduleHideControls = useCallback(() => {
-    if (hideTimerRef.current) clearTimeout(hideTimerRef.current)
-    if (isPlaying && !isHoveringControls) {
-      hideTimerRef.current = setTimeout(() => setShowControls(false), 1500)
-    }
-  }, [isPlaying, isHoveringControls])
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    const container = containerRef.current
+    if (!container) return
+    const rect = container.getBoundingClientRect()
+    const relY = (e.clientY - rect.top) / rect.height
+    const relX = (e.clientX - rect.left) / rect.width
+    setShowBottom(relY > 0.7)
+    setShowTop(relY < 0.15 && relX < 0.15)
+    setCursorHidden(false)
+    if (cursorTimerRef.current) clearTimeout(cursorTimerRef.current)
+    cursorTimerRef.current = setTimeout(() => setCursorHidden(true), 5000)
+  }, [])
 
-  const showControlsNow = useCallback(() => {
-    setShowControls(true)
-    scheduleHideControls()
-  }, [scheduleHideControls])
+  useEffect(() => {
+    cursorTimerRef.current = setTimeout(() => setCursorHidden(true), 5000)
+    return () => { if (cursorTimerRef.current) clearTimeout(cursorTimerRef.current) }
+  }, [])
 
   useEffect(() => {
     const video = videoRef.current
@@ -400,15 +436,13 @@ export default function VideoPlayer({
     const video = videoRef.current
     if (!video) return
     video.currentTime = Math.max(0, video.currentTime - 10)
-    showControlsNow()
-  }, [showControlsNow])
+  }, [])
 
   const skipForward = useCallback(() => {
     const video = videoRef.current
     if (!video) return
     video.currentTime = Math.min(video.duration, video.currentTime + 30)
-    showControlsNow()
-  }, [showControlsNow])
+  }, [])
 
   const handleSpeedSelect = useCallback((s: number) => {
     const video = videoRef.current
@@ -446,6 +480,11 @@ export default function VideoPlayer({
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
+      if (e.key.toLowerCase() === 't') {
+        e.preventDefault()
+        if (onSendChat) setChatInputOpen((v) => !v)
+        return
+      }
       switch (e.key.toLowerCase()) {
         case ' ':
         case 'k':
@@ -478,7 +517,7 @@ export default function VideoPlayer({
     }
     document.addEventListener('keydown', onKeyDown)
     return () => document.removeEventListener('keydown', onKeyDown)
-  }, [togglePlay, skipBackward, skipForward, toggleMute, toggleFullscreen, isFullscreen])
+  }, [togglePlay, skipBackward, skipForward, toggleMute, toggleFullscreen, isFullscreen, onSendChat])
 
   useEffect(() => {
     const onClick = () => { setShowSpeedMenu(false); setShowQualityMenu(false) }
@@ -486,12 +525,31 @@ export default function VideoPlayer({
     return () => document.removeEventListener('click', onClick)
   }, [])
 
+  useEffect(() => {
+    const fill = (isMuted ? 0 : volume * 100).toFixed(0)
+    if (!volumeStyleRef.current) {
+      volumeStyleRef.current = document.createElement('style')
+      document.head.appendChild(volumeStyleRef.current)
+    }
+    volumeStyleRef.current.textContent = `
+      #${volumeSliderId} { -webkit-appearance: none; appearance: none; cursor: pointer; background: transparent; }
+      #${volumeSliderId}::-webkit-slider-runnable-track { height: 4px; border-radius: 9999px; background: linear-gradient(to right, white ${fill}%, rgba(255,255,255,0.2) ${fill}%); }
+      #${volumeSliderId}::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 12px; height: 12px; border-radius: 50%; background: white; margin-top: -4px; cursor: pointer; }
+      #${volumeSliderId}::-moz-range-track { height: 4px; border-radius: 9999px; background: rgba(255,255,255,0.2); }
+      #${volumeSliderId}::-moz-range-progress { height: 4px; border-radius: 9999px; background: white; }
+      #${volumeSliderId}::-moz-range-thumb { width: 12px; height: 12px; border-radius: 50%; background: white; border: none; cursor: pointer; }
+    `
+    return () => {
+      if (volumeStyleRef.current) { volumeStyleRef.current.remove(); volumeStyleRef.current = null }
+    }
+  }, [volume, isMuted, volumeSliderId])
+
   return (
     <div
       ref={containerRef}
-      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black"
-      onMouseMove={showControlsNow}
-      onMouseLeave={() => isPlaying && !isHoveringControls && setShowControls(false)}
+      className={`fixed inset-0 z-[9999] flex items-center justify-center bg-black transition-[cursor] duration-200 ${cursorHidden ? 'cursor-none' : 'cursor-auto'}`}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={() => { setShowBottom(false); setShowTop(false) }}
     >
       {isError && (
         <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 bg-black/80">
@@ -500,7 +558,7 @@ export default function VideoPlayer({
           <div className="flex gap-3">
             <button
               onClick={handleRetry}
-              className="rounded-md bg-indigo-600 px-6 py-2 text-sm text-white transition hover:bg-indigo-500"
+              className="rounded-md bg-accent-600 px-6 py-2 text-sm text-white transition hover:bg-accent-500"
             >
               Retry
             </button>
@@ -560,7 +618,7 @@ export default function VideoPlayer({
             {canGoNext && (
               <button
                 onClick={handleNextEpisode}
-                className="inline-flex items-center gap-2 rounded-full bg-indigo-600 px-6 py-2 text-sm text-white transition hover:bg-indigo-500"
+                className="inline-flex items-center gap-2 rounded-full bg-accent-600 px-6 py-2 text-sm text-white transition hover:bg-accent-500"
               >
                 <ForwardIcon className="h-4 w-4" />
                 Next Episode
@@ -576,15 +634,66 @@ export default function VideoPlayer({
         </div>
       )}
 
+      {chatVisible && messages && messages.length > 0 && (
+        <div className="pointer-events-none absolute bottom-44 right-4 z-10 flex flex-col items-end gap-1.5">
+          {messages.slice(-5).map((m) => {
+            const age = Date.now() - m.timestamp
+            const opacity = age > 8000 ? 0 : Math.max(0, 1 - (age - 4000) / 4000)
+            return (
+              <div
+                key={m.id}
+                className="pointer-events-auto w-56 rounded-xl bg-black/65 px-3 py-1.5 shadow-lg backdrop-blur"
+                style={{ opacity, transition: 'opacity 1s ease-out' }}
+              >
+                {m.system ? (
+                  <p className="text-[11px] text-slate-400 italic">{m.text}</p>
+                ) : (
+                  <>
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-[10px] font-semibold text-accent-300">{m.senderName}</span>
+                      <span className="text-[9px] text-white/40">{new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                    </div>
+                    <p className="text-xs text-slate-200">{m.text}</p>
+                  </>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {chatInputOpen && onSendChat && (
+        <div className="absolute bottom-24 right-4 z-20" onClick={() => setChatInputOpen(false)}>
+          <div className="pointer-events-auto rounded-xl bg-black/80 px-3 py-2.5 shadow-lg backdrop-blur" onClick={(e) => e.stopPropagation()}>
+            <form onSubmit={(e) => {
+              e.preventDefault()
+              if (!chatText.trim()) { setChatInputOpen(false); return }
+              onSendChat(chatText.trim())
+              setChatText('')
+              setChatInputOpen(false)
+            }}>
+              <input
+                type="text"
+                value={chatText}
+                onChange={(e) => setChatText(e.target.value)}
+                placeholder="Type a message..."
+                autoFocus
+                className="w-48 rounded-lg bg-white/10 px-3 py-1.5 text-xs text-white placeholder-white/40 outline-none ring-1 ring-white/20 focus:ring-accent-500"
+              />
+            </form>
+          </div>
+        </div>
+      )}
+
       <div
         className={`pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/40 transition-opacity duration-300 ${
-          showControls ? 'opacity-100' : 'opacity-0'
+          showBottom ? 'opacity-100' : 'opacity-0'
         }`}
       />
 
       <div
         className={`absolute left-0 right-0 top-0 flex items-center gap-3 px-4 pt-4 transition-opacity duration-300 ${
-          showControls ? 'opacity-100' : 'opacity-0 pointer-events-none'
+          showTop ? 'opacity-100' : 'opacity-0 pointer-events-none'
         }`}
       >
         <button
@@ -597,9 +706,38 @@ export default function VideoPlayer({
         <span className="text-sm font-semibold text-white drop-shadow-lg">{activeTitle}</span>
       </div>
 
+      {onResync && !isHost && (
+        <div className="pointer-events-auto absolute right-4 top-4 z-10 flex items-center gap-1.5 rounded-full bg-black/60 px-2.5 py-1 backdrop-blur-sm">
+          {drift === null ? (
+            <div className="flex items-center gap-1.5">
+              <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-gray-500" />
+              <span className="text-[10px] text-gray-400">Calculating</span>
+            </div>
+          ) : (() => {
+            const d = drift!
+            return (
+              <>
+                <div className={`h-1.5 w-1.5 rounded-full ${
+                  Math.abs(d) < 2 ? 'bg-green-500' : Math.abs(d) < 10 ? 'bg-yellow-500' : 'bg-red-500'
+                }`} />
+                <span className="text-[10px] text-white/70">
+                  {hostPaused ? `Paused ${d > 0 ? `+${d}s` : `${d}s`}` : `${d > 0 ? '+' : ''}${d}s`}
+                </span>
+                <button onClick={onResync} className="rounded p-0.5 text-accent-400 hover:bg-white/10" title="Resync to host">
+                  <ArrowsRightLeftIcon className="h-3 w-3" />
+                </button>
+                <button onClick={onToggleDetach} className="rounded p-0.5 text-white/50 hover:text-white" title={isDetached ? 'Reattach' : 'Detach'}>
+                  {isDetached ? <LinkIcon className="h-3 w-3" /> : <LinkSlashIcon className="h-3 w-3" />}
+                </button>
+              </>
+            )
+          })()}
+        </div>
+      )}
+
       <div
         className={`absolute bottom-0 left-0 right-0 transition-opacity duration-300 ${
-          showControls ? 'opacity-100' : 'opacity-0 pointer-events-none'
+          showBottom ? 'opacity-100' : 'opacity-0 pointer-events-none'
         }`}
         onMouseEnter={() => setIsHoveringControls(true)}
         onMouseLeave={() => setIsHoveringControls(false)}
@@ -671,13 +809,13 @@ export default function VideoPlayer({
             <div className="flex items-center gap-1">
               <input
                 type="range"
+                id={volumeSliderId}
                 min="0"
                 max="1"
                 step="0.01"
                 value={isMuted ? 0 : volume}
                 onChange={handleVolumeChange}
-                className="w-20 appearance-none rounded-full bg-white/20 outline-none [&::-webkit-slider-runnable-track]:h-1 [&::-webkit-slider-runnable-track]:rounded-full [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white"
-                style={{ height: 4 }}
+                className="w-20"
               />
             </div>
 
@@ -768,6 +906,18 @@ export default function VideoPlayer({
                   </div>
                 )}
               </div>
+            )}
+
+            {onSendChat && (
+              <button
+                onClick={() => setChatVisible((v) => !v)}
+                className={`pointer-events-auto rounded-full p-1.5 transition hover:bg-white/10 ${
+                  chatVisible ? 'text-accent-400' : 'text-white/70 hover:text-white'
+                }`}
+                title="Chat (T)"
+              >
+                <ChatBubbleLeftRightIcon className="h-4 w-4" />
+              </button>
             )}
 
             <button

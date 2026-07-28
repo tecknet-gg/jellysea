@@ -185,7 +185,7 @@ function SeasonPanel({ tvId, seasonNumber, title }: { tvId: number; seasonNumber
   if (!data && !error) {
     return (
       <div className="flex items-center justify-center py-4">
-        <div className="h-5 w-5 animate-spin rounded-full border-2 border-solid border-indigo-500 border-t-transparent" />
+        <div className="h-5 w-5 animate-spin rounded-full border-2 border-solid border-accent-500 border-t-transparent" />
       </div>
     )
   }
@@ -392,39 +392,16 @@ export default function TvDetails() {
               </div>
             )}
 
-            <div className="media-actions mt-4 flex flex-wrap items-center gap-2">
-              {trailerUrl && (
-                <a
-                  href={trailerUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-2 rounded-full bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-500"
-                >
-                  <FilmIcon className="h-4 w-4" />
-                  Watch Trailer
-                </a>
-              )}
-
-              {data.homepage && (
-                <a
-                  href={data.homepage}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-2 rounded-full bg-dark-600 px-4 py-2 text-sm font-semibold text-slate-300 transition hover:bg-dark-500"
-                >
-                  <PlayIcon className="h-4 w-4" />
-                  Homepage
-                </a>
-              )}
+            <div className="media-actions mt-4 flex flex-nowrap items-center gap-2">
               {data.mediaInfo?.status === MediaStatus.AVAILABLE ? (
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex flex-shrink-0 flex-nowrap items-center gap-2">
                   <select
                     value={selectedSeason}
                     onChange={(e) => {
                       setSelectedSeason(Number(e.target.value))
                       setSelectedEpisode(1)
                     }}
-                    className="rounded-lg bg-dark-600 px-3 py-2 text-sm text-white border border-dark-500"
+                    className="rounded-lg bg-dark-600 px-3 py-2 text-sm text-white border border-dark-500 flex-shrink-0"
                   >
                     {data.seasons
                       .filter((s) => s.seasonNumber > 0 && s.episodeCount > 0)
@@ -437,7 +414,7 @@ export default function TvDetails() {
                   <select
                     value={selectedEpisode}
                     onChange={(e) => setSelectedEpisode(Number(e.target.value))}
-                    className="rounded-lg bg-dark-600 px-3 py-2 text-sm text-white border border-dark-500 max-w-[320px]"
+                    className="rounded-lg bg-dark-600 px-3 py-2 text-sm text-white border border-dark-500 max-w-[200px] flex-shrink-0"
                   >
                     {parsedEpisodes.map((ep: { episodeNumber: number; name: string }) => (
                       <option key={ep.episodeNumber} value={ep.episodeNumber}>
@@ -464,24 +441,48 @@ export default function TvDetails() {
                   onUpdate={() => setRequestUpdate((v) => v + 1)}
                 />
               )}
-              {hasPermission(Permission.ADMIN) && (data.mediaInfo?.status === MediaStatus.AVAILABLE || data.mediaInfo?.status === MediaStatus.PARTIALLY_AVAILABLE) && (
-                <button
-                  onClick={async () => {
-                    if (!confirm('Are you sure you want to permanently delete this media including all files?')) return;
-                    if (!confirm('This action cannot be undone. Delete ' + data.name + '?')) return;
-                    try {
-                      await api.delete(`/media/${data.id}/delete`, { params: { mediaType: 'tv' } });
-                      window.location.reload();
-                    } catch {
-                      alert('Failed to delete media');
-                    }
-                  }}
-                  className="inline-flex items-center gap-2 rounded-full bg-red-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-red-600"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                  Delete
-                </button>
-              )}
+              <div className="flex flex-nowrap items-center gap-2 overflow-x-auto hide-scrollbar" style={{ scrollbarWidth: 'none' }}>
+                {trailerUrl && (
+                  <a
+                    href={trailerUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-2 whitespace-nowrap rounded-full bg-dark-600 px-4 py-2 text-sm font-semibold text-slate-300 transition hover:bg-dark-500"
+                  >
+                    <FilmIcon className="h-4 w-4" />
+                    Trailer
+                  </a>
+                )}
+                {data.homepage && (
+                  <a
+                    href={data.homepage}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-2 whitespace-nowrap rounded-full bg-dark-600 px-4 py-2 text-sm font-semibold text-slate-300 transition hover:bg-dark-500"
+                  >
+                    <PlayIcon className="h-4 w-4" />
+                    Homepage
+                  </a>
+                )}
+                {hasPermission(Permission.ADMIN) && (data.mediaInfo?.status === MediaStatus.AVAILABLE || data.mediaInfo?.status === MediaStatus.PARTIALLY_AVAILABLE) && (
+                  <button
+                    onClick={async () => {
+                      if (!confirm('Are you sure you want to permanently delete this media including all files?')) return;
+                      if (!confirm('This action cannot be undone. Delete ' + data.name + '?')) return;
+                      try {
+                        await api.delete(`/media/${data.id}/delete`, { params: { mediaType: 'tv' } });
+                        window.location.reload();
+                      } catch {
+                        alert('Failed to delete media');
+                      }
+                    }}
+                    className="inline-flex items-center gap-2 whitespace-nowrap rounded-full bg-red-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-red-600"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                    Delete
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -659,7 +660,7 @@ export default function TvDetails() {
                       rel="noreferrer"
                       className="media-rating flex items-center gap-1.5 text-sm text-slate-300 transition hover:text-white"
                     >
-                      <span className="font-bold text-indigo-400">TMDB</span>
+                      <span className="font-bold text-accent-400">TMDB</span>
                       <span className="font-semibold">
                         {Math.round(data.voteAverage * 10)}%
                       </span>
@@ -783,7 +784,7 @@ export default function TvDetails() {
                       href={`https://www.themoviedb.org/tv/${data.id}`}
                       target="_blank"
                       rel="noreferrer"
-                      className="font-semibold text-indigo-400 hover:text-indigo-300"
+                      className="font-semibold text-accent-400 hover:text-accent-300"
                     >
                       TMDB
                     </a>

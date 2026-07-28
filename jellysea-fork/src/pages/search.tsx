@@ -123,7 +123,7 @@ export default function SearchPage() {
                 onClick={() => setActiveTab(tab.key)}
                 className={`flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition ${
                   isActive
-                    ? 'bg-indigo-600 text-white shadow'
+                    ? 'bg-accent-600 text-white shadow'
                     : 'text-slate-400 hover:text-white'
                 }`}
               >
@@ -132,7 +132,7 @@ export default function SearchPage() {
                   <span
                     className={`rounded px-1.5 py-0.5 text-xs ${
                       isActive
-                        ? 'bg-indigo-500 text-white'
+                        ? 'bg-accent-500 text-white'
                         : 'bg-dark-600 text-slate-400'
                     }`}
                   >
@@ -179,7 +179,7 @@ export default function SearchPage() {
 
       {isLoadingMore && (
         <div className="mt-8 flex justify-center">
-          <div className="h-6 w-6 animate-spin rounded-full border-2 border-solid border-indigo-500 border-t-transparent" />
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-solid border-accent-500 border-t-transparent" />
         </div>
       )}
 

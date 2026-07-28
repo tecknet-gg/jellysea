@@ -97,7 +97,7 @@ export default function LibraryBrowserModal({ open, onClose, onSelect }: Library
               <div className="flex-1 overflow-y-auto p-5">
                 {!data && !error && (
                   <div className="flex justify-center py-16">
-                    <div className="h-6 w-6 animate-spin rounded-full border-2 border-solid border-indigo-500 border-t-transparent" />
+                    <div className="h-6 w-6 animate-spin rounded-full border-2 border-solid border-accent-500 border-t-transparent" />
                   </div>
                 )}
 
@@ -133,7 +133,7 @@ export default function LibraryBrowserModal({ open, onClose, onSelect }: Library
                             })
                             onClose()
                           }}
-                          className="w-28 flex-shrink-0 overflow-hidden rounded-lg text-left transition hover:-translate-y-1 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 sm:w-32"
+                          className="w-28 flex-shrink-0 overflow-hidden rounded-lg text-left transition hover:-translate-y-1 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-accent-500 sm:w-32"
                         >
                           {d?.posterPath ? (
                             <CachedImage type="tmdb" src={d.posterPath} alt="" className="w-full rounded-lg" style={{ aspectRatio: '600/900' }} />

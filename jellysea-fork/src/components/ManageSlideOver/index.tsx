@@ -143,6 +143,23 @@ const ManageSlideOver = ({
     }
   };
 
+  const deleteMediaFromDisk = async () => {
+    if (data.mediaInfo) {
+      const name = isMovie(data) ? data.title : data.name;
+      if (!confirm(`Are you sure you want to permanently delete this media including all files?`)) return;
+      if (!confirm(`This action cannot be undone. Delete ${name}?`)) return;
+      try {
+        await axios.delete(`/api/v1/media/${data.id}/delete`, {
+          params: { mediaType: data.mediaInfo.mediaType },
+        });
+        revalidate();
+        onClose();
+      } catch {
+        alert('Failed to delete media');
+      }
+    }
+  };
+
   const isDefaultService = () => {
     if (data.mediaInfo) {
       if (data.mediaInfo.mediaType === MediaType.MOVIE) {
@@ -720,6 +737,23 @@ const ManageSlideOver = ({
                     })}
                   </div>
                 </div>
+                {(data.mediaInfo?.status === MediaStatus.AVAILABLE ||
+                  data.mediaInfo?.status ===
+                    MediaStatus.PARTIALLY_AVAILABLE) && (
+                  <div>
+                    <ConfirmButton
+                      onClick={() => deleteMediaFromDisk()}
+                      confirmText={intl.formatMessage(globalMessages.areyousure)}
+                      className="w-full"
+                    >
+                      <TrashIcon />
+                      <span>Delete Media Files</span>
+                    </ConfirmButton>
+                    <div className="mt-2 text-xs text-gray-400">
+                      * This will permanently delete the media files from disk.
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}

@@ -338,7 +338,7 @@ const CollectionRequestModal = ({
                         <span
                           aria-hidden="true"
                           className={`${
-                            isAllParts() ? 'bg-indigo-500' : 'bg-gray-800'
+                            isAllParts() ? 'bg-accent-500' : 'bg-gray-800'
                           } absolute mx-auto h-4 w-9 rounded-full transition-colors duration-200 ease-in-out`}
                         />
                         <span
@@ -420,7 +420,7 @@ const CollectionRequestModal = ({
                                       MediaStatus.BLOCKLISTED) ||
                                   partRequest ||
                                   isSelectedPart(part.id)
-                                    ? 'bg-indigo-500'
+                                    ? 'bg-accent-500'
                                     : 'bg-gray-700'
                                 } absolute mx-auto h-4 w-9 rounded-full transition-colors duration-200 ease-in-out`}
                               />

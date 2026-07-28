@@ -66,10 +66,10 @@ const Badge = (
       break;
     default:
       badgeStyle.push(
-        'bg-indigo-500/80 border border-indigo-500 !text-indigo-100'
+        'bg-accent-500/80 border border-accent-500 !text-accent-100'
       );
       if (href) {
-        badgeStyle.push('hover:bg-indigo-500');
+        badgeStyle.push('hover:bg-accent-500');
       }
   }
 

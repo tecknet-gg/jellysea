@@ -34,9 +34,9 @@ const ButtonWithDropdown = ({
       break;
     default:
       styleClasses.mainButtonClasses +=
-        ' bg-indigo-600/80 border-indigo-500 hover:bg-indigo-600 hover:border-indigo-500 active:bg-indigo-700 active:border-indigo-700 focus:ring-blue';
+        ' bg-accent-600/80 border-accent-500 hover:bg-accent-600 hover:border-accent-500 active:bg-accent-700 active:border-accent-700 focus:ring-blue';
       styleClasses.dropdownSideButtonClasses +=
-        ' bg-indigo-600/80 border-indigo-500 hover:bg-indigo-600 active:bg-indigo-600 focus:ring-blue';
+        ' bg-accent-600/80 border-accent-500 hover:bg-accent-600 active:bg-accent-600 focus:ring-blue';
   }
 
   const TriggerElement = props.as ?? 'button';

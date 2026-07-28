@@ -195,11 +195,12 @@ const TitleCard = ({
                 className="absolute inset-0 h-full w-full cursor-pointer overflow-hidden text-left bg-gradient-to-t from-dark via-dark/60 to-transparent"
               >
                 <div className="flex h-full w-full items-end">
-                  <div className={`px-2 text-white ${
-                    showRequestButton &&
-                    (!currentStatus ||
-                      currentStatus === MediaStatus.UNKNOWN ||
-                      currentStatus === MediaStatus.DELETED)
+                  <div className={`px-2 text-white w-full ${
+                    currentStatus === MediaStatus.AVAILABLE ||
+                    (showRequestButton &&
+                      (!currentStatus ||
+                        currentStatus === MediaStatus.UNKNOWN ||
+                        currentStatus === MediaStatus.DELETED))
                       ? 'pb-12'
                       : 'pb-2'
                   }`}>

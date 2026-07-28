@@ -188,7 +188,7 @@ const MobileMenu = ({
               key={`mobile-menu-link-${link.href}`}
               href={link.href}
               className={`flex items-center ${
-                isActive ? 'text-indigo-500' : ''
+                isActive ? 'text-accent-500' : ''
               }`}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
@@ -207,7 +207,7 @@ const MobileMenu = ({
                 pendingRequestsCount > 0 &&
                 hasPermission(Permission.MANAGE_REQUESTS) && (
                   <div className="ml-auto flex">
-                    <Badge className="rounded-md border-indigo-500 bg-gradient-to-br from-indigo-600 to-purple-600">
+                    <Badge className="rounded-md border-accent-500 bg-gradient-to-br from-accent-600 to-accent-600">
                       {pendingRequestsCount}
                     </Badge>
                   </div>
@@ -216,7 +216,7 @@ const MobileMenu = ({
                 openIssuesCount > 0 &&
                 hasPermission(Permission.MANAGE_ISSUES) && (
                   <div className="ml-auto flex">
-                    <Badge className="rounded-md border-indigo-500 bg-gradient-to-br from-indigo-600 to-purple-600">
+                    <Badge className="rounded-md border-accent-500 bg-gradient-to-br from-accent-600 to-accent-600">
                       {openIssuesCount}
                     </Badge>
                   </div>
@@ -237,7 +237,7 @@ const MobileMenu = ({
                   key={`mobile-menu-link-${link.href}`}
                   href={link.href}
                   className={`relative flex flex-col items-center space-y-1 ${
-                    isActive ? 'text-indigo-500' : ''
+                    isActive ? 'text-accent-500' : ''
                   }`}
                 >
                   {cloneElement(
@@ -253,8 +253,8 @@ const MobileMenu = ({
                         <Badge
                           className={`bg-gradient-to-br ${
                             router.pathname.match(link.activeRegExp)
-                              ? 'border-indigo-600 from-indigo-700 to-purple-700'
-                              : 'border-indigo-500 from-indigo-600 to-purple-600'
+                              ? 'border-accent-600 from-accent-700 to-accent-700'
+                              : 'border-accent-500 from-accent-600 to-accent-600'
                           } flex ${
                             pendingRequestsCount > 99 ? 'w-6' : 'w-4'
                           } h-4 items-center justify-center !px-[5px] !py-[7px] text-[8px]`}
@@ -271,7 +271,7 @@ const MobileMenu = ({
           {filteredLinks.length > 4 && filteredLinks.length !== 5 && (
             <button
               className={`flex flex-col items-center space-y-1 ${
-                isOpen ? 'text-indigo-500' : ''
+                isOpen ? 'text-accent-500' : ''
               }`}
               onClick={() => toggle()}
             >

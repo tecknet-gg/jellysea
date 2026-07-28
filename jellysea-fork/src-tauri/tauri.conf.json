@@ -1,0 +1,37 @@
+{
+  "productName": "Jellysea",
+  "version": "0.4.6",
+  "identifier": "gg.tecknet.jellysea",
+  "build": {
+    "frontendDist": "../dist",
+    "devUrl": "https://test.tecknet.dev"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "Jellysea",
+        "width": 1280,
+        "height": 800,
+        "minWidth": 900,
+        "minHeight": 600,
+        "resizable": true,
+        "fullscreen": false,
+        "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Jellysea/0.4.6"
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ]
+  }
+}

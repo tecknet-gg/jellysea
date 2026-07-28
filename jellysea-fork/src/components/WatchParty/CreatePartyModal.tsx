@@ -83,7 +83,7 @@ export default function CreatePartyModal({ open, onClose, onSubmit }: CreatePart
                     placeholder="tecknet's basement"
                     maxLength={50}
                     required
-                    className="w-full rounded-lg border border-dark-600 bg-dark-800 px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-indigo-500 focus:outline-none"
+                    className="w-full rounded-lg border border-dark-600 bg-dark-800 px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-accent-500 focus:outline-none"
                   />
                 </div>
 
@@ -93,7 +93,7 @@ export default function CreatePartyModal({ open, onClose, onSubmit }: CreatePart
                       type="checkbox"
                       checked={hasPassword}
                       onChange={(e) => setHasPassword(e.target.checked)}
-                      className="rounded border-dark-600 bg-dark-800 text-indigo-500 focus:ring-indigo-500"
+                      className="rounded border-dark-600 bg-dark-800 text-accent-500 focus:ring-accent-500"
                     />
                     Password protect
                   </label>
@@ -103,7 +103,7 @@ export default function CreatePartyModal({ open, onClose, onSubmit }: CreatePart
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="Party password"
-                      className="mt-2 w-full rounded-lg border border-dark-600 bg-dark-800 px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-indigo-500 focus:outline-none"
+                      className="mt-2 w-full rounded-lg border border-dark-600 bg-dark-800 px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-accent-500 focus:outline-none"
                     />
                   )}
                 </div>
@@ -123,7 +123,7 @@ export default function CreatePartyModal({ open, onClose, onSubmit }: CreatePart
                   <button
                     type="submit"
                     disabled={!name.trim() || submitting}
-                    className="flex-1 rounded-lg bg-gradient-to-br from-indigo-600 to-purple-600 px-4 py-2 text-sm font-medium text-white transition hover:from-indigo-500 hover:to-purple-500 disabled:opacity-50"
+                    className="flex-1 rounded-lg bg-gradient-to-br from-accent-600 to-accent-600 px-4 py-2 text-sm font-medium text-white transition hover:from-accent-500 hover:to-accent-500 disabled:opacity-50"
                   >
                     {submitting ? 'Creating...' : 'Create Party'}
                   </button>

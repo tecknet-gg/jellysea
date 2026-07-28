@@ -143,7 +143,7 @@ const StatusBadge = ({
         status === MediaStatus.DELETED
           ? 'bg-red-600/80'
           : status === MediaStatus.PROCESSING
-            ? 'bg-indigo-500/80'
+            ? 'bg-accent-500/80'
             : 'bg-green-500/80'
       } transition-all duration-200 ease-in-out`}
       style={{

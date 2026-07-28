@@ -17,7 +17,6 @@ import { Permission } from '@server/lib/permissions';
 import { getSettings } from '@server/lib/settings';
 import logger from '@server/logger';
 import { isAuthenticated } from '@server/middleware/auth';
-import axios from 'axios';
 import { Router } from 'express';
 import type { FindOneOptions } from 'typeorm';
 import { EntityNotFoundError, In, IsNull, Not } from 'typeorm';
@@ -395,132 +394,101 @@ mediaRoutes.get<{ id: string }, MediaWatchDataResponse>(
   }
 );
 
-mediaRoutes.delete('/:tmdbId/delete', async (req, res, next) => {
-  const tmdbId = Number(req.params.tmdbId);
-  const mediaType = req.query.mediaType === 'tv' ? MediaType.TV : MediaType.MOVIE;
+mediaRoutes.delete(
+  '/:tmdbId/delete',
+  isAuthenticated(Permission.MANAGE_REQUESTS),
+  async (req, res, next) => {
+    const tmdbId = Number(req.params.tmdbId);
+    const mediaType =
+      req.query.mediaType === 'tv' ? MediaType.TV : MediaType.MOVIE;
 
-  try {
-    const mediaRepository = getRepository(Media);
-    const media = await mediaRepository.findOne({
-      where: { tmdbId, mediaType },
-      relations: { requests: true, seasons: true, issues: true },
-    });
+    try {
+      const mediaRepository = getRepository(Media);
+      const media = await mediaRepository.findOne({
+        where: { tmdbId, mediaType },
+        relations: { requests: true, seasons: true, issues: true },
+      });
 
-    if (!media) {
-      return next({ status: 404, message: 'Media not found' });
-    }
-
-    const jellyfinMediaId = media.jellyfinMediaId;
-    const settings = getSettings();
-    const { apiKey } = settings.jellyfin;
-    const { ip, port, useSsl, urlBase } = settings.jellyfin;
-    const protocol = useSsl ? 'https' : 'http';
-    const host = `${protocol}://${ip}:${port}${urlBase || ''}`;
-
-    let filePath: string | null = null;
-
-    // Get file path from Jellyfin if we have a media ID
-    if (jellyfinMediaId) {
-      try {
-        const usersResponse = await axios.get<Array<{ Id: string }>>(
-          `${host}/Users?api_key=${apiKey}`,
-          { timeout: 5000 }
-        );
-        const userId = usersResponse.data[0]?.Id;
-        if (userId) {
-          const itemResponse = await axios.get(
-            `${host}/Users/${userId}/Items/${jellyfinMediaId}?fields=Path,MediaSources&api_key=${apiKey}`,
-            { timeout: 10000 }
-          );
-          const source = itemResponse.data.MediaSources?.[0];
-          filePath = source?.Path || itemResponse.data.Path;
-        }
-      } catch (e) {
-        logger.warn('Failed to fetch Jellyfin item path', {
-          label: 'Media Delete',
-          errorMessage: (e as { message?: string }).message,
-        });
+      if (!media) {
+        return next({ status: 404, message: 'Media not found' });
       }
-    }
 
-    // Delete the file from disk
-    if (filePath) {
-      try {
-        const fs = await import('fs');
-        if (fs.existsSync(filePath)) {
-          // Delete all files in the directory if it's in a subfolder, otherwise just the file
-          const stat = fs.statSync(filePath);
-          if (stat.isDirectory()) {
-            fs.rmSync(filePath, { recursive: true, force: true });
-          } else {
-            fs.unlinkSync(filePath);
-          }
-          logger.info(`Deleted file: ${filePath}`, { label: 'Media Delete' });
-        }
-      } catch (e) {
-        logger.error(`Failed to delete file: ${filePath}`, {
-          label: 'Media Delete',
-          errorMessage: (e as { message?: string }).message,
+      const settings = getSettings();
+      const isMovie = mediaType === MediaType.MOVIE;
+
+      const serviceSettings = isMovie
+        ? settings.radarr.find((r) => r.isDefault && !r.is4k)
+        : settings.sonarr.find((s) => s.isDefault && !s.is4k);
+
+      if (!serviceSettings) {
+        return next({
+          status: 400,
+          message: `No default ${isMovie ? 'Radarr' : 'Sonarr'} server configured`,
         });
       }
 
-      // Try to delete the parent directory if empty (for movie folders)
-      if (filePath) {
-        try {
-          const parentDir = filePath.substring(0, filePath.lastIndexOf('/'));
-          const fs = await import('fs');
-          if (parentDir && parentDir !== '/media/Movies' && parentDir !== '/media/TV') {
-            const remaining = fs.readdirSync(parentDir);
-            if (remaining.length === 0) {
-              fs.rmdirSync(parentDir);
-              logger.info(`Removed empty directory: ${parentDir}`, { label: 'Media Delete' });
-            }
-          }
-        } catch {
-          // Directory not empty or can't remove — that's fine
+      const service = isMovie
+        ? new RadarrAPI({
+            apiKey: serviceSettings.apiKey,
+            url: RadarrAPI.buildUrl(serviceSettings, '/api/v3'),
+          })
+        : new SonarrAPI({
+            apiKey: serviceSettings.apiKey,
+            url: SonarrAPI.buildUrl(serviceSettings, '/api/v3'),
+          });
+
+      if (isMovie) {
+        await (service as RadarrAPI).removeMovie(tmdbId);
+      } else {
+        const tmdb = new TheMovieDb();
+        const series = await tmdb.getTvShow({ tvId: tmdbId });
+        const tvdbId = series.external_ids.tvdb_id ?? media.tvdbId;
+        if (!tvdbId) {
+          return next({ status: 400, message: 'TVDB ID not found' });
+        }
+        await (service as SonarrAPI).removeSeries(tvdbId);
+      }
+
+      // Remove associated requests
+      if (media.requests && media.requests.length > 0) {
+        const requestRepository = getRepository(MediaRequest);
+        for (const request of media.requests) {
+          await requestRepository.delete(request.id);
         }
       }
-    }
 
-    // Remove associated requests
-    if (media.requests && media.requests.length > 0) {
-      const requestRepository = getRepository(MediaRequest);
-      for (const request of media.requests) {
-        await requestRepository.delete(request.id);
+      // Remove seasons
+      if (media.seasons && media.seasons.length > 0) {
+        const seasonRepository = getRepository(Season);
+        for (const season of media.seasons) {
+          await seasonRepository.delete(season.id);
+        }
       }
-    }
 
-    // Remove seasons
-    if (media.seasons && media.seasons.length > 0) {
-      const seasonRepository = getRepository(Season);
-      for (const season of media.seasons) {
-        await seasonRepository.delete(season.id);
+      // Remove issues
+      if (media.issues && media.issues.length > 0) {
+        const issueRepository = getRepository(Issue);
+        for (const issue of media.issues) {
+          await issueRepository.delete(issue.id);
+        }
       }
+
+      // Set media status to DELETED
+      media.status = MediaStatus.DELETED;
+      media.status4k = MediaStatus.DELETED;
+      await mediaRepository.save(media);
+
+      return res
+        .status(200)
+        .json({ message: 'Media deleted successfully' });
+    } catch (e) {
+      logger.error('Something went wrong deleting media', {
+        label: 'Media Delete',
+        errorMessage: (e as { message?: string }).message,
+      });
+      return next({ status: 500, message: 'Failed to delete media' });
     }
-
-    // Remove issues
-    if (media.issues && media.issues.length > 0) {
-      const issueRepository = getRepository(Issue);
-      for (const issue of media.issues) {
-        await issueRepository.delete(issue.id);
-      }
-    }
-
-    // Set media status to DELETED
-    media.status = MediaStatus.DELETED;
-    media.status4k = MediaStatus.DELETED;
-    media.jellyfinMediaId = null;
-    media.jellyfinMediaId4k = null;
-    await mediaRepository.save(media);
-
-    return res.status(200).json({ message: 'Media deleted successfully' });
-  } catch (e) {
-    logger.error('Something went wrong deleting media', {
-      label: 'Media Delete',
-      errorMessage: (e as { message?: string }).message,
-    });
-    return next({ status: 500, message: 'Failed to delete media' });
   }
-});
+);
 
 export default mediaRoutes;
