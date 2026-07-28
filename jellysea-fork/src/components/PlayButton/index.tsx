@@ -7,6 +7,7 @@ import useJellyfinStream from '@app/hooks/useJellyfinStream'
 import type { ResolveResult, ResolveNextResult } from '@app/hooks/useJellyfinStream'
 import VideoPlayer from '@app/components/VideoPlayer'
 import { usePlayer } from '@app/context/PlayerContext'
+import { useIsTauri, tauriInvoke } from '@app/hooks/useIsTauri'
 import toast from 'react-hot-toast'
 
 interface PlayButtonProps {
@@ -54,6 +55,7 @@ export default function PlayButton({
   const [resolvedEpisodeNumber, setResolvedEpisodeNumber] = useState<number | undefined>(inputEpisodeNumber)
   const resolvingRef = useRef(false)
   const { setPlayerActive } = usePlayer()
+  const isTauri = useIsTauri()
   const { isLoading, resolve, resolveNext, reset } = useJellyfinStream(
     tmdbId,
     mediaType,
@@ -70,19 +72,31 @@ export default function PlayButton({
     try {
       const result: ResolveResult = await resolve()
       if (result.url) {
-        setCurrentType(result.type)
-        setCurrentUrl(result.url)
-        if (result.seasonNumber) setResolvedSeasonNumber(result.seasonNumber)
-        if (result.episodeNumber) setResolvedEpisodeNumber(result.episodeNumber)
-        setShowPlayer(true)
-        setPlayerActive(true)
+        if (isTauri) {
+          // Desktop mode: play via MPV native player
+          try {
+            await tauriInvoke('launch_mpv')
+            await tauriInvoke('play', { url: result.url })
+            setPlayerActive(true)
+          } catch (err) {
+            toast.error('Failed to launch native player: ' + (err as Error).message)
+          }
+        } else {
+          // Browser mode: use HLS.js player
+          setCurrentType(result.type)
+          setCurrentUrl(result.url)
+          if (result.seasonNumber) setResolvedSeasonNumber(result.seasonNumber)
+          if (result.episodeNumber) setResolvedEpisodeNumber(result.episodeNumber)
+          setShowPlayer(true)
+          setPlayerActive(true)
+        }
       } else {
         toast.error(result.error ?? 'Unable to start playback')
       }
     } finally {
       resolvingRef.current = false
     }
-  }, [resolve, setPlayerActive])
+  }, [resolve, setPlayerActive, isTauri])
 
   const handleNextEpisode = useCallback(
     async (currentSeason: number, currentEpisode: number): Promise<ResolveNextResult> => {
@@ -135,7 +149,7 @@ export default function PlayButton({
         </span>
       </button>
 
-      {showPlayer && currentUrl && typeof document !== 'undefined' && createPortal(
+      {!isTauri && showPlayer && currentUrl && typeof document !== 'undefined' && createPortal(
         <VideoPlayer
           type={currentType}
           streamUrl={currentUrl}

@@ -45,6 +45,7 @@
     "@supercharge/request-ip": "1.2.0",
     "@svgr/webpack": "8.1.0",
     "@tanem/react-nprogress": "6.0.3",
+    "@tauri-apps/api": "^2.11.1",
     "ace-builds": "1.43.6",
     "axios": "1.15.0",
     "axios-rate-limit": "1.9.0",
