@@ -1,6 +1,6 @@
 {
   "productName": "Jellysea",
-  "version": "0.4.7",
+  "version": "0.4.8",
   "identifier": "gg.tecknet.jellysea",
   "build": {
     "frontendDist": "../dist",
