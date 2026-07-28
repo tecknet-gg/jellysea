@@ -224,15 +224,12 @@ export default function MovieDetails() {
   return (
     <div className="media-page">
       {data.backdropPath && (
-        <div
-          className="media-page-bg-image"
-          style={{
-            height: 493,
-            backgroundImage: `url(https://image.tmdb.org/t/p/original${data.backdropPath})`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-          }}
-        >
+        <div className="media-page-bg-image relative" style={{ height: 493 }}>
+          <img
+            src={`https://image.tmdb.org/t/p/original${data.backdropPath}`}
+            alt=""
+            className="absolute inset-0 h-full w-full object-cover"
+          />
           <div
             className="absolute inset-0"
             style={{
