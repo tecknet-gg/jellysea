@@ -176,7 +176,8 @@
   }
 
   .media-page-bg-image {
-    @apply absolute inset-0 h-full w-full;
+    @apply absolute inset-0 w-full;
+    pointer-events: none;
     z-index: -10;
   }
 

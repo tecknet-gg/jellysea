@@ -333,14 +333,15 @@ export default function TvDetails() {
   return (
     <div className="media-page">
       {data.backdropPath && (
-        <div className="media-page-bg-image relative" style={{ height: 493 }}>
-          <CachedImage
-            type="tmdb"
-            src={data.backdropPath ?? ""}
-            alt=""
-            fill
-            className="object-cover"
-          />
+        <div
+          className="media-page-bg-image"
+          style={{
+            height: 493,
+            backgroundImage: `url(https://image.tmdb.org/t/p/original${data.backdropPath})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+          }}
+        >
           <div
             className="absolute inset-0"
             style={{
