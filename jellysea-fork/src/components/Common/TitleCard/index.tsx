@@ -114,7 +114,7 @@ export default function TitleCard({ id, image, year, title, userScore, mediaType
 
           {currentStatus && currentStatus !== MediaStatus.UNKNOWN && statusConfig[currentStatus] && (
             <div
-              className={`absolute left-2 top-2 rounded-full shadow-md w-5 h-5 ring-1 flex items-center justify-center ${
+              className={`absolute right-2 top-2 rounded-full shadow-md w-5 h-5 ring-1 flex items-center justify-center ${
                 statusConfig[currentStatus].className
               }`}
             >
